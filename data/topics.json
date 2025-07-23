@@ -1,0 +1,252 @@
+{
+  "prompts": [
+    {
+      "id": "basic-prompt",
+      "title": "Basic Prompt Template",
+      "description": "Simple variable substitution in prompt templates",
+      "category": "prompts",
+      "codeSnippet": "const template = \"Tell me a {adjective} joke about {topic}.\";\nconst prompt = new PromptTemplate({\n    template: template,\n    inputVariables: [\"adjective\", \"topic\"],\n});\n\nconst formattedPrompt = await prompt.format({\n    adjective: \"funny\",\n    topic: \"programming\"\n});\n\nconsole.log(formattedPrompt);\n// Output: \"Tell me a funny joke about programming.\"",
+      "demoFunction": "basicPromptTemplateDemo"
+    },
+    {
+      "id": "chat-prompt",
+      "title": "Chat Prompt Template",
+      "description": "Structured conversation prompts with system and human messages",
+      "category": "prompts",
+      "codeSnippet": "const chatPrompt = ChatPromptTemplate.fromMessages([\n    [\"system\", \"You are a helpful assistant that translates {input_language} to {output_language}.\"],\n    [\"human\", \"{text}\"]\n]);\n\nconst formattedChatPrompt = await chatPrompt.formatMessages({\n    input_language: \"English\",\n    output_language: \"French\",\n    text: \"I love programming.\"\n});\n\nconsole.log(formattedChatPrompt);",
+      "demoFunction": "chatPromptTemplateDemo"
+    },
+    {
+      "id": "complex-prompt",
+      "title": "Complex Prompt Template",
+      "description": "Multi-step prompts with detailed instructions and examples",
+      "category": "prompts",
+      "codeSnippet": "const complexTemplate = `You are an expert {role} with {experience} years of experience.\n\nTask: {task}\n\nContext:\n{context}\n\nInstructions:\n1. Analyze the given information\n2. Provide a detailed response\n3. Include specific examples\n4. Conclude with actionable recommendations\n\nResponse:`;\n\nconst prompt = new PromptTemplate({\n    template: complexTemplate,\n    inputVariables: [\"role\", \"experience\", \"task\", \"context\"],\n});",
+      "demoFunction": "complexPromptTemplateDemo"
+    },
+    {
+      "id": "conditional-prompt",
+      "title": "Conditional Prompt Template",
+      "description": "Dynamic prompts that change based on input conditions",
+      "category": "prompts",
+      "codeSnippet": "const createConditionalPrompt = (audience: string): PromptTemplate => {\n    const templates = {\n        beginner: \"Explain {topic} in simple terms with basic examples.\",\n        intermediate: \"Provide a detailed explanation of {topic} with practical applications.\",\n        expert: \"Give an advanced analysis of {topic} including edge cases and optimizations.\"\n    };\n    \n    return new PromptTemplate({\n        template: templates[audience] || templates.intermediate,\n        inputVariables: [\"topic\"]\n    });\n};",
+      "demoFunction": "conditionalPromptTemplateDemo"
+    },
+    {
+      "id": "few-shot-prompt",
+      "title": "Few-Shot Prompt Template",
+      "description": "Learning from examples with few-shot prompting techniques",
+      "category": "prompts",
+      "codeSnippet": "const examples = [\n    { input: \"happy\", output: \"sad\" },\n    { input: \"tall\", output: \"short\" },\n    { input: \"fast\", output: \"slow\" }\n];\n\nconst examplePrompt = PromptTemplate.fromTemplate(\n    \"Input: {input}\\nOutput: {output}\"\n);\n\nconst fewShotPrompt = new FewShotPromptTemplate({\n    examples: examples,\n    examplePrompt: examplePrompt,\n    prefix: \"Give the antonym of the word.\",\n    suffix: \"Input: {adjective}\\nOutput:\",\n    inputVariables: [\"adjective\"],\n});",
+      "demoFunction": "fewShotPromptTemplateDemo"
+    },
+    {
+      "id": "openai-prompt",
+      "title": "OpenAI Integration",
+      "description": "Using prompt templates with OpenAI models for real responses",
+      "category": "prompts",
+      "codeSnippet": "const model = new OpenAI({\n    apiKey: process.env.OPENAI_API_KEY,\n    temperature: 0.7,\n});\n\nconst prompt = PromptTemplate.fromTemplate(\n    \"Write a {length} {genre} story about {character}.\"\n);\n\nconst chain = prompt.pipe(model);\n\nconst result = await chain.invoke({\n    length: \"short\",\n    genre: \"mystery\",\n    character: \"a detective cat\"\n});",
+      "demoFunction": "promptTemplateWithOpenAIDemo"
+    }
+  ],
+  "chains": [
+    {
+      "id": "basic-chain",
+      "title": "Basic LLMChain",
+      "description": "Traditional LangChain LLMChain usage with OpenAI",
+      "category": "chains",
+      "codeSnippet": "const model = new OpenAI({\n    apiKey: process.env.OPENAI_API_KEY,\n    temperature: 0.7,\n});\n\nconst prompt = new PromptTemplate({\n    template: \"Write a {length} {style} story about {topic}.\",\n    inputVariables: [\"length\", \"style\", \"topic\"],\n});\n\nconst chain = new LLMChain({\n    llm: model,\n    prompt: prompt,\n});\n\nconst result = await chain.call({\n    topic: \"a time-traveling cat\",\n    style: \"humorous\",\n    length: \"short\"\n});",
+      "demoFunction": "basicLLMChainDemo"
+    },
+    {
+      "id": "simple-lcel",
+      "title": "Simple LCEL Chain",
+      "description": "Modern LangChain Expression Language with pipe operators",
+      "category": "chains",
+      "codeSnippet": "const model = new ChatOpenAI({\n    apiKey: process.env.OPENAI_API_KEY,\n    temperature: 0.7,\n});\n\nconst prompt = ChatPromptTemplate.fromTemplate(\n    \"Translate the following text to {target_language}: {text}\"\n);\n\n// LCEL Chain using pipe operator\nconst chain = prompt.pipe(model).pipe(new StringOutputParser());\n\nconst result = await chain.invoke({\n    text: \"Hello, how are you today?\",\n    target_language: \"Spanish\"\n});",
+      "demoFunction": "simpleLCELChainDemo"
+    },
+    {
+      "id": "complex-lcel",
+      "title": "Complex LCEL Chain",
+      "description": "Multi-step LCEL chains with RunnableSequence",
+      "category": "chains",
+      "codeSnippet": "const chain = RunnableSequence.from([\n    {\n        topic: (input) => input.topic,\n        language: (input) => input.language,\n    },\n    {\n        topic: (input) => input.topic,\n        language: (input) => input.language,\n        poem: RunnableSequence.from([\n            ChatPromptTemplate.fromTemplate(\n                \"Write a short poem about {topic}\"\n            ),\n            model,\n            new StringOutputParser(),\n        ]),\n    },\n    {\n        result: RunnableSequence.from([\n            ChatPromptTemplate.fromTemplate(\n                \"Translate this poem to {language}:\\n\\n{poem}\"\n            ),\n            model,\n            new StringOutputParser(),\n        ]),\n    },\n]);",
+      "demoFunction": "complexLCELChainDemo"
+    },
+    {
+      "id": "custom-functions",
+      "title": "LCEL with Custom Functions",
+      "description": "Integrating custom logic with RunnableLambda in LCEL chains",
+      "category": "chains",
+      "codeSnippet": "const customAnalyzer = new RunnableLambda({\n    func: (input: string) => {\n        const wordCount = input.split(' ').length;\n        const sentiment = input.includes('good') || input.includes('great') ? 'positive' : 'neutral';\n        return {\n            original: input,\n            wordCount,\n            sentiment,\n            timestamp: new Date().toISOString()\n        };\n    },\n});\n\nconst chain = RunnableSequence.from([\n    customAnalyzer,\n    ChatPromptTemplate.fromTemplate(\n        \"Analyze this text data: {original}\\nWord count: {wordCount}\\nSentiment: {sentiment}\\nProvide insights.\"\n    ),\n    model,\n    new StringOutputParser(),\n]);",
+      "demoFunction": "lcelWithCustomFunctionsDemo"
+    },
+    {
+      "id": "parallel-chains",
+      "title": "Parallel LCEL Chains",
+      "description": "Running multiple chains in parallel for comprehensive analysis",
+      "category": "chains",
+      "codeSnippet": "const parallelChain = RunnableSequence.from([\n    {\n        summary: RunnableSequence.from([\n            ChatPromptTemplate.fromTemplate(\"Summarize this topic in 2 sentences: {topic}\"),\n            model,\n            new StringOutputParser(),\n        ]),\n        pros_cons: RunnableSequence.from([\n            ChatPromptTemplate.fromTemplate(\"List 3 pros and 3 cons of: {topic}\"),\n            model,\n            new StringOutputParser(),\n        ]),\n        questions: RunnableSequence.from([\n            ChatPromptTemplate.fromTemplate(\"Generate 3 thoughtful questions about: {topic}\"),\n            model,\n            new StringOutputParser(),\n        ]),\n    },\n    new RunnableLambda({\n        func: (results) => ({\n            topic: \"Artificial Intelligence\",\n            analysis: {\n                summary: results.summary,\n                pros_cons: results.pros_cons,\n                questions: results.questions,\n            },\n            generated_at: new Date().toISOString(),\n        }),\n    }),\n]);",
+      "demoFunction": "parallelLCELChainsDemo"
+    },
+    {
+      "id": "conditional-chain",
+      "title": "Conditional LCEL Chain",
+      "description": "Dynamic chain selection based on input",
+      "category": "chains",
+      "codeSnippet": "const createConditionalChain = (audience: string) => {\n    const chains = {\n        beginner: ChatPromptTemplate.fromTemplate(\n            \"Explain {topic} in simple terms for beginners.\"\n        ),\n        expert: ChatPromptTemplate.fromTemplate(\n            \"Provide an advanced analysis of {topic} with technical details.\"\n        )\n    };\n    \n    return RunnableSequence.from([\n        chains[audience] || chains.beginner,\n        model,\n        new StringOutputParser(),\n    ]);\n};\n\nconst beginnerChain = createConditionalChain('beginner');\nconst result = await beginnerChain.invoke({\n    topic: \"React hooks\",\n    audience: \"beginner\"\n});",
+      "demoFunction": "conditionalLCELChainDemo"
+    }
+  ],
+  "memory": [
+    {
+      "id": "basic-buffer-memory",
+      "title": "Basic Buffer Memory",
+      "description": "Store complete conversation history for context",
+      "category": "memory",
+      "codeSnippet": "const memory = new BufferMemory({\n    memoryKey: \"chat_history\",\n    returnMessages: true,\n});\n\nconst chain = new ConversationChain({\n    llm: model,\n    memory: memory,\n});\n\n// First interaction\nconst response1 = await chain.call({\n    input: \"Hi, my name is Alice and I love programming.\"\n});\n\n// Second interaction - AI remembers the context\nconst response2 = await chain.call({\n    input: \"What's my name and what do I love?\"\n});",
+      "demoFunction": "basicBufferMemoryDemo"
+    },
+    {
+      "id": "buffer-window-memory",
+      "title": "Buffer Window Memory",
+      "description": "Keep only the last K interactions to limit memory size",
+      "category": "memory",
+      "codeSnippet": "const memory = new BufferWindowMemory({\n    memoryKey: \"chat_history\",\n    returnMessages: true,\n    k: 2, // Keep only last 2 message pairs\n});\n\nconst chain = new ConversationChain({\n    llm: model,\n    memory: memory,\n});\n\n// Multiple interactions to test window behavior\nconst interactions = [\n    \"My favorite color is blue.\",\n    \"I work as a software engineer.\",\n    \"I have a pet cat named Whiskers.\",\n    \"What do you remember about me?\"\n];\n\nfor (const input of interactions) {\n    const response = await chain.call({ input });\n    console.log(`Human: ${input}`);\n    console.log(`AI: ${response.response}`);\n}",
+      "demoFunction": "bufferWindowMemoryDemo"
+    },
+    {
+      "id": "conversation-summary-memory",
+      "title": "Conversation Summary Memory",
+      "description": "Summarize old conversations to maintain key information",
+      "category": "memory",
+      "codeSnippet": "const memory = new ConversationSummaryMemory({\n    memoryKey: \"chat_history\",\n    llm: model,\n    returnMessages: true,\n});\n\nconst chain = new ConversationChain({\n    llm: model,\n    memory: memory,\n});\n\n// Simulate a longer conversation\nconst longConversation = [\n    \"I'm planning a trip to Japan next month.\",\n    \"I'm particularly interested in visiting Tokyo and Kyoto.\",\n    \"I love Japanese cuisine, especially sushi and ramen.\",\n    \"My budget is around $3000 for the entire trip.\",\n    \"Can you give me some travel recommendations?\"\n];\n\nfor (const input of longConversation) {\n    const response = await chain.call({ input });\n    // Memory automatically summarizes old parts\n}",
+      "demoFunction": "conversationSummaryMemoryDemo"
+    },
+    {
+      "id": "custom-memory-lcel",
+      "title": "Custom Memory with LCEL",
+      "description": "Implement custom memory logic using LCEL patterns",
+      "category": "memory",
+      "codeSnippet": "// Simple in-memory storage for conversation history\nlet conversationHistory: ConversationTurn[] = [];\n\nconst addToMemory = (human: string, ai: string) => {\n    conversationHistory.push({ human, ai });\n    // Keep only last 5 interactions\n    if (conversationHistory.length > 5) {\n        conversationHistory = conversationHistory.slice(-5);\n    }\n};\n\nconst getMemoryContext = () => {\n    return conversationHistory\n        .map(turn => `Human: ${turn.human}\\nAI: ${turn.ai}`)\n        .join('\\n\\n');\n};\n\n// Create LCEL chain with custom memory\nconst chain = RunnableSequence.from([\n    {\n        history: () => getMemoryContext(),\n        input: (input: MemoryInput) => input.input,\n    },\n    prompt,\n    model,\n    new StringOutputParser(),\n]);",
+      "demoFunction": "customMemoryLCELDemo"
+    },
+    {
+      "id": "memory-comparison",
+      "title": "Memory Types Comparison",
+      "description": "Compare different memory types and their use cases",
+      "category": "memory",
+      "codeSnippet": "// Memory Types Overview:\n\n// 1. BufferMemory: Stores all conversation history\n//    - Pros: Complete context, simple implementation\n//    - Cons: Can become very long, expensive\n//    - Use case: Short conversations\n\n// 2. BufferWindowMemory: Stores only last K interactions\n//    - Pros: Fixed memory size, prevents overflow\n//    - Cons: Loses older context\n//    - Use case: Long conversations, recent context focus\n\n// 3. ConversationSummaryMemory: Summarizes old conversations\n//    - Pros: Maintains key information, handles long conversations\n//    - Cons: May lose details, requires additional LLM calls\n//    - Use case: Very long conversations\n\n// 4. Custom Memory: Tailored to specific needs\n//    - Pros: Full control, domain-specific logic\n//    - Cons: More development effort\n//    - Use case: Specialized applications\n\n// Choosing the Right Memory Type:\n// - Short conversations: BufferMemory\n// - Long conversations: BufferWindowMemory\n// - Very long conversations: ConversationSummaryMemory\n// - Special requirements: Custom Memory",
+      "demoFunction": "memoryComparisonDemo"
+    }
+  ],
+  "agents": [
+    {
+      "id": "basic-agent",
+      "title": "Basic ReAct Agent",
+      "description": "Simple agent that can reason and act with built-in tools",
+      "category": "agents",
+      "codeSnippet": "import { AgentExecutor, createReactAgent } from 'langchain/agents';\nimport { pull } from 'langchain/hub';\nimport { ChatOpenAI } from '@langchain/openai';\nimport { Calculator } from 'langchain/tools/calculator';\nimport { SerpAPI } from 'langchain/tools/serpapi';\n\n// Initialize the LLM\nconst llm = new ChatOpenAI({\n  temperature: 0,\n  modelName: 'gpt-3.5-turbo',\n});\n\n// Define available tools\nconst tools = [\n  new Calculator(),\n  new SerpAPI(process.env.SERPAPI_API_KEY),\n];\n\n// Get the prompt template from LangChain Hub\nconst prompt = await pull('hwchase17/react');\n\n// Create the ReAct agent\nconst agent = await createReactAgent({\n  llm,\n  tools,\n  prompt,\n});\n\n// Create agent executor\nconst agentExecutor = new AgentExecutor({\n  agent,\n  tools,\n  verbose: true,\n});\n\n// Execute agent with a complex query\nconst result = await agentExecutor.invoke({\n  input: 'What is the square root of 144 multiplied by 7?',\n});\n\nconsole.log(result.output);",
+      "demoFunction": "basicReactAgentDemo"
+    },
+    {
+      "id": "custom-tools",
+      "title": "Custom Tools Creation",
+      "description": "Creating and using custom tools with agents",
+      "category": "agents",
+      "codeSnippet": "import { Tool } from 'langchain/tools';\nimport { z } from 'zod';\n\n// Define a custom weather tool\nclass WeatherTool extends Tool {\n  name = 'weather';\n  description = 'Get current weather for a city. Input should be a city name.';\n\n  schema = z.object({\n    city: z.string().describe('The city name to get weather for'),\n  });\n\n  async _call(input: string): Promise<string> {\n    // In a real implementation, you'd call a weather API\n    const weatherData = {\n      'New York': 'Sunny, 75°F',\n      'London': 'Cloudy, 60°F',\n      'Tokyo': 'Rainy, 68°F',\n    };\n    \n    return weatherData[input] || `Weather data not available for ${input}`;\n  }\n}\n\n// Define a custom database query tool\nclass DatabaseTool extends Tool {\n  name = 'database_query';\n  description = 'Query user database. Input should be a SQL-like query.';\n\n  async _call(query: string): Promise<string> {\n    // Mock database response\n    const mockResults = [\n      { id: 1, name: 'John Doe', age: 30 },\n      { id: 2, name: 'Jane Smith', age: 25 },\n    ];\n    \n    return JSON.stringify(mockResults, null, 2);\n  }\n}\n\n// Use custom tools with agent\nconst customTools = [\n  new WeatherTool(),\n  new DatabaseTool(),\n  new Calculator(),\n];\n\nconst agentWithCustomTools = new AgentExecutor({\n  agent: await createReactAgent({ llm, tools: customTools, prompt }),\n  tools: customTools,\n});",
+      "demoFunction": "customToolsDemo"
+    },
+    {
+      "id": "function-calling-agent",
+      "title": "Function Calling Agent",
+      "description": "Agent using OpenAI function calling for structured tool usage",
+      "category": "agents",
+      "codeSnippet": "import { createOpenAIFunctionsAgent, AgentExecutor } from 'langchain/agents';\nimport { ChatOpenAI } from '@langchain/openai';\nimport { DynamicTool } from 'langchain/tools';\n\n// Create function-calling compatible tools\nconst emailTool = new DynamicTool({\n  name: 'send_email',\n  description: 'Send an email to a recipient',\n  func: async ({ to, subject, body }) => {\n    console.log(`Sending email to: ${to}`);\n    console.log(`Subject: ${subject}`);\n    console.log(`Body: ${body}`);\n    return `Email sent successfully to ${to}`;\n  },\n  schema: z.object({\n    to: z.string().describe('Email recipient'),\n    subject: z.string().describe('Email subject'),\n    body: z.string().describe('Email body'),\n  }),\n});\n\nconst calendarTool = new DynamicTool({\n  name: 'schedule_meeting',\n  description: 'Schedule a meeting in the calendar',\n  func: async ({ title, date, duration }) => {\n    console.log(`Scheduling: ${title} on ${date} for ${duration} minutes`);\n    return `Meeting '${title}' scheduled for ${date}`;\n  },\n  schema: z.object({\n    title: z.string().describe('Meeting title'),\n    date: z.string().describe('Meeting date (YYYY-MM-DD)'),\n    duration: z.number().describe('Duration in minutes'),\n  }),\n});\n\nconst tools = [emailTool, calendarTool];\n\n// Create function calling agent\nconst llm = new ChatOpenAI({\n  modelName: 'gpt-3.5-turbo-0613',\n  temperature: 0,\n});\n\nconst prompt = ChatPromptTemplate.fromMessages([\n  ['system', 'You are a helpful assistant that can send emails and schedule meetings.'],\n  ['human', '{input}'],\n  ['placeholder', '{agent_scratchpad}'],\n]);\n\nconst agent = await createOpenAIFunctionsAgent({\n  llm,\n  tools,\n  prompt,\n});\n\nconst agentExecutor = new AgentExecutor({\n  agent,\n  tools,\n});\n\nconst result = await agentExecutor.invoke({\n  input: 'Send an email to john@example.com about our meeting tomorrow at 2 PM, then schedule the meeting in the calendar.',\n});",
+      "demoFunction": "functionCallingAgentDemo"
+    },
+    {
+      "id": "multi-agent-system",
+      "title": "Multi-Agent System",
+      "description": "Coordinating multiple specialized agents for complex tasks",
+      "category": "agents",
+      "codeSnippet": "// Define specialized agents\nclass ResearchAgent {\n  constructor(llm, tools) {\n    this.llm = llm;\n    this.tools = tools.filter(tool => \n      ['serpapi', 'wikipedia'].includes(tool.name)\n    );\n  }\n\n  async research(topic) {\n    const prompt = `Research the topic: ${topic}. Provide key facts and insights.`;\n    // Agent logic here\n    return `Research completed on ${topic}`;\n  }\n}\n\nclass WritingAgent {\n  constructor(llm) {\n    this.llm = llm;\n  }\n\n  async write(research, style = 'professional') {\n    const prompt = `Based on this research: ${research}\n\nWrite a ${style} article.`;\n    // Agent logic here\n    return `Article written in ${style} style`;\n  }\n}\n\nclass ReviewAgent {\n  constructor(llm) {\n    this.llm = llm;\n  }\n\n  async review(content) {\n    const prompt = `Review and improve this content: ${content}`;\n    // Agent logic here\n    return `Content reviewed and improved`;\n  }\n}\n\n// Orchestrator to coordinate agents\nclass MultiAgentOrchestrator {\n  constructor() {\n    this.researchAgent = new ResearchAgent(llm, tools);\n    this.writingAgent = new WritingAgent(llm);\n    this.reviewAgent = new ReviewAgent(llm);\n  }\n\n  async processTask(task) {\n    console.log('Starting multi-agent workflow...');\n    \n    // Step 1: Research\n    const research = await this.researchAgent.research(task.topic);\n    console.log('Research phase completed');\n    \n    // Step 2: Writing\n    const article = await this.writingAgent.write(research, task.style);\n    console.log('Writing phase completed');\n    \n    // Step 3: Review\n    const finalContent = await this.reviewAgent.review(article);\n    console.log('Review phase completed');\n    \n    return finalContent;\n  }\n}\n\n// Usage\nconst orchestrator = new MultiAgentOrchestrator();\nconst result = await orchestrator.processTask({\n  topic: 'Artificial Intelligence in Healthcare',\n  style: 'technical'\n});",
+      "demoFunction": "multiAgentSystemDemo"
+    },
+    {
+      "id": "agent-with-memory",
+      "title": "Agent with Memory",
+      "description": "Persistent agent that remembers previous interactions",
+      "category": "agents",
+      "codeSnippet": "import { BufferMemory } from 'langchain/memory';\nimport { ConversationChain } from 'langchain/chains';\n\n// Create agent with persistent memory\nclass MemoryAgent {\n  constructor(llm, tools) {\n    this.memory = new BufferMemory({\n      memoryKey: 'chat_history',\n      returnMessages: true,\n    });\n    \n    this.agent = new AgentExecutor({\n      agent: await createReactAgent({ llm, tools, prompt }),\n      tools,\n      memory: this.memory,\n      verbose: true,\n    });\n  }\n\n  async chat(input) {\n    const result = await this.agent.invoke({\n      input,\n      chat_history: await this.memory.chatHistory.getMessages(),\n    });\n    \n    // Save interaction to memory\n    await this.memory.saveContext(\n      { input },\n      { output: result.output }\n    );\n    \n    return result.output;\n  }\n\n  async getMemory() {\n    return await this.memory.chatHistory.getMessages();\n  }\n\n  clearMemory() {\n    this.memory.clear();\n  }\n}\n\n// Usage example\nconst memoryAgent = new MemoryAgent(llm, tools);\n\n// First interaction\nconst response1 = await memoryAgent.chat(\n  'My name is Alice and I work as a software engineer.'\n);\n\n// Second interaction - agent remembers previous context\nconst response2 = await memoryAgent.chat(\n  'What did I tell you about my profession?'\n);\n\n// Check memory\nconst memory = await memoryAgent.getMemory();\nconsole.log('Agent memory:', memory);",
+      "demoFunction": "agentWithMemoryDemo"
+    },
+    {
+      "id": "tool-integration",
+      "title": "Advanced Tool Integration",
+      "description": "Integrating external APIs and services as agent tools",
+      "category": "agents",
+      "codeSnippet": "import { DynamicTool } from 'langchain/tools';\nimport axios from 'axios';\n\n// GitHub API Tool\nclass GitHubTool extends Tool {\n  name = 'github_search';\n  description = 'Search GitHub repositories. Input should be a search query.';\n\n  async _call(query: string): Promise<string> {\n    try {\n      const response = await axios.get(\n        `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=5`\n      );\n      \n      const repos = response.data.items.map(repo => ({\n        name: repo.full_name,\n        description: repo.description,\n        stars: repo.stargazers_count,\n        url: repo.html_url,\n      }));\n      \n      return JSON.stringify(repos, null, 2);\n    } catch (error) {\n      return `Error searching GitHub: ${error.message}`;\n    }\n  }\n}\n\n// News API Tool\nclass NewsTool extends Tool {\n  name = 'get_news';\n  description = 'Get latest news headlines. Input should be a topic or category.';\n\n  async _call(topic: string): Promise<string> {\n    try {\n      // Mock news API response\n      const mockNews = [\n        {\n          title: `Breaking: ${topic} developments announced`,\n          source: 'Tech News',\n          publishedAt: new Date().toISOString(),\n        },\n        {\n          title: `Analysis: Impact of ${topic} on industry`,\n          source: 'Industry Weekly',\n          publishedAt: new Date().toISOString(),\n        },\n      ];\n      \n      return JSON.stringify(mockNews, null, 2);\n    } catch (error) {\n      return `Error fetching news: ${error.message}`;\n    }\n  }\n}\n\n// File System Tool\nclass FileSystemTool extends Tool {\n  name = 'file_operations';\n  description = 'Perform file operations like read, write, list. Input format: \"operation:path\".';\n\n  async _call(input: string): Promise<string> {\n    const [operation, path] = input.split(':');\n    \n    switch (operation) {\n      case 'list':\n        // Mock directory listing\n        return JSON.stringify(['file1.txt', 'file2.js', 'folder1/'], null, 2);\n      case 'read':\n        return `Content of ${path}: Mock file content here...`;\n      case 'write':\n        return `Successfully wrote to ${path}`;\n      default:\n        return `Unknown operation: ${operation}`;\n    }\n  }\n}\n\n// Create agent with integrated tools\nconst advancedTools = [\n  new GitHubTool(),\n  new NewsTool(),\n  new FileSystemTool(),\n  new Calculator(),\n];\n\nconst advancedAgent = new AgentExecutor({\n  agent: await createReactAgent({ llm, tools: advancedTools, prompt }),\n  tools: advancedTools,\n  verbose: true,\n});",
+      "demoFunction": "advancedToolIntegrationDemo"
+    }
+  ],
+  "rag": [
+    {
+      "id": "basic-document-loading",
+      "title": "Basic Document Loading",
+      "description": "Load and process various document formats (PDF, TXT, DOCX)",
+      "category": "rag",
+      "codeSnippet": "import { PDFLoader } from 'langchain/document_loaders/fs/pdf';\nimport { TextLoader } from 'langchain/document_loaders/fs/text';\nimport { DocxLoader } from 'langchain/document_loaders/fs/docx';\nimport { CSVLoader } from 'langchain/document_loaders/fs/csv';\n\n// Load PDF documents\nconst pdfLoader = new PDFLoader('path/to/document.pdf', {\n  splitPages: false,\n});\nconst pdfDocs = await pdfLoader.load();\nconsole.log(`Loaded PDF with ${pdfDocs.length} pages`);\n\n// Load text files\nconst textLoader = new TextLoader('path/to/document.txt');\nconst textDocs = await textLoader.load();\nconsole.log(`Loaded text document: ${textDocs[0].pageContent.substring(0, 100)}...`);\n\n// Load DOCX files\nconst docxLoader = new DocxLoader('path/to/document.docx');\nconst docxDocs = await docxLoader.load();\nconsole.log(`Loaded DOCX with ${docxDocs[0].pageContent.length} characters`);\n\n// Load CSV files\nconst csvLoader = new CSVLoader('path/to/data.csv');\nconst csvDocs = await csvLoader.load();\nconsole.log(`Loaded CSV with ${csvDocs.length} rows`);\n\n// Process document metadata\npdfDocs.forEach((doc, index) => {\n  console.log(`Document ${index}:`, {\n    source: doc.metadata.source,\n    pageNumber: doc.metadata.loc?.pageNumber,\n    contentLength: doc.pageContent.length\n  });\n});",
+      "demoFunction": "basicDocumentLoadingDemo"
+    },
+    {
+      "id": "text-splitting",
+      "title": "Text Splitting & Chunking",
+      "description": "Split large documents into manageable chunks for processing",
+      "category": "rag",
+      "codeSnippet": "import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';\nimport { TokenTextSplitter } from 'langchain/text_splitter';\nimport { MarkdownTextSplitter } from 'langchain/text_splitter';\n\n// Basic recursive character splitting\nconst textSplitter = new RecursiveCharacterTextSplitter({\n  chunkSize: 1000,\n  chunkOverlap: 200,\n  separators: ['\\n\\n', '\\n', ' ', ''],\n});\n\nconst docs = await textSplitter.createDocuments([longText]);\nconsole.log(`Split into ${docs.length} chunks`);\n\n// Token-based splitting (useful for LLM context limits)\nconst tokenSplitter = new TokenTextSplitter({\n  chunkSize: 512,\n  chunkOverlap: 50,\n});\n\nconst tokenDocs = await tokenSplitter.splitDocuments(docs);\nconsole.log(`Token-based splitting: ${tokenDocs.length} chunks`);\n\n// Markdown-aware splitting\nconst markdownSplitter = new MarkdownTextSplitter({\n  chunkSize: 800,\n  chunkOverlap: 100,\n});\n\nconst markdownDocs = await markdownSplitter.createDocuments([markdownText]);\n\n// Custom splitting with metadata preservation\nconst customSplitter = new RecursiveCharacterTextSplitter({\n  chunkSize: 500,\n  chunkOverlap: 50,\n  keepSeparator: true,\n});\n\nconst chunkedDocs = await customSplitter.splitDocuments(originalDocs);\nchunkedDocs.forEach((chunk, index) => {\n  console.log(`Chunk ${index}:`, {\n    length: chunk.pageContent.length,\n    source: chunk.metadata.source,\n    chunkIndex: index\n  });\n});",
+      "demoFunction": "textSplittingDemo"
+    },
+    {
+      "id": "vector-embeddings",
+      "title": "Vector Embeddings & Storage",
+      "description": "Create embeddings and store documents in vector databases",
+      "category": "rag",
+      "codeSnippet": "import { OpenAIEmbeddings } from '@langchain/openai';\nimport { MemoryVectorStore } from 'langchain/vectorstores/memory';\nimport { Chroma } from 'langchain/vectorstores/chroma';\nimport { Pinecone } from 'langchain/vectorstores/pinecone';\n\n// Initialize embeddings model\nconst embeddings = new OpenAIEmbeddings({\n  apiKey: process.env.OPENAI_API_KEY,\n  modelName: 'text-embedding-ada-002',\n});\n\n// Create in-memory vector store (for development)\nconst memoryVectorStore = await MemoryVectorStore.fromDocuments(\n  documents,\n  embeddings\n);\n\nconsole.log(`Created memory vector store with ${documents.length} documents`);\n\n// Similarity search\nconst query = 'What is machine learning?';\nconst similarDocs = await memoryVectorStore.similaritySearch(query, 4);\n\nconsole.log(`Found ${similarDocs.length} similar documents:`);\nsimilarDocs.forEach((doc, index) => {\n  console.log(`${index + 1}. ${doc.pageContent.substring(0, 100)}...`);\n});\n\n// Similarity search with scores\nconst docsWithScores = await memoryVectorStore.similaritySearchWithScore(query, 3);\ndocsWithScores.forEach(([doc, score], index) => {\n  console.log(`${index + 1}. Score: ${score.toFixed(3)} - ${doc.pageContent.substring(0, 80)}...`);\n});\n\n// Advanced filtering\nconst filteredDocs = await memoryVectorStore.similaritySearch(\n  query,\n  2,\n  { source: 'specific-document.pdf' } // Filter by metadata\n);\n\n// Persistent vector store (Chroma example)\nconst chromaStore = await Chroma.fromDocuments(\n  documents,\n  embeddings,\n  {\n    collectionName: 'my-collection',\n    url: 'http://localhost:8000',\n  }\n);",
+      "demoFunction": "vectorEmbeddingsDemo"
+    },
+    {
+      "id": "basic-rag-chain",
+      "title": "Basic RAG Chain",
+      "description": "Build a simple retrieval-augmented generation system",
+      "category": "rag",
+      "codeSnippet": "import { ChatOpenAI } from '@langchain/openai';\nimport { RetrievalQAChain } from 'langchain/chains';\nimport { PromptTemplate } from '@langchain/core/prompts';\n\n// Initialize components\nconst llm = new ChatOpenAI({\n  temperature: 0,\n  modelName: 'gpt-3.5-turbo',\n});\n\n// Create retriever from vector store\nconst retriever = vectorStore.asRetriever({\n  searchType: 'similarity',\n  searchKwargs: { k: 4 },\n});\n\n// Custom prompt template for RAG\nconst ragPrompt = PromptTemplate.fromTemplate(\n  `Use the following pieces of context to answer the question at the end.\n  If you don't know the answer, just say that you don't know, don't try to make up an answer.\n\n  Context:\n  {context}\n\n  Question: {question}\n\n  Answer:`\n);\n\n// Create RAG chain\nconst ragChain = RetrievalQAChain.fromLLM(llm, retriever, {\n  prompt: ragPrompt,\n  returnSourceDocuments: true,\n});\n\n// Query the RAG system\nconst question = 'What are the main benefits of using vector databases?';\nconst response = await ragChain.call({\n  query: question,\n});\n\nconsole.log('Question:', question);\nconsole.log('Answer:', response.text);\nconsole.log('\nSource Documents:');\nresponse.sourceDocuments.forEach((doc, index) => {\n  console.log(`${index + 1}. Source: ${doc.metadata.source}`);\n  console.log(`   Content: ${doc.pageContent.substring(0, 150)}...`);\n});",
+      "demoFunction": "basicRagChainDemo"
+    },
+    {
+      "id": "advanced-rag-lcel",
+      "title": "Advanced RAG with LCEL",
+      "description": "Build sophisticated RAG systems using LangChain Expression Language",
+      "category": "rag",
+      "codeSnippet": "import { RunnableSequence, RunnableMap } from '@langchain/core/runnables';\nimport { StringOutputParser } from '@langchain/core/output_parsers';\nimport { ChatPromptTemplate } from '@langchain/core/prompts';\n\n// Advanced RAG prompt with context formatting\nconst advancedRagPrompt = ChatPromptTemplate.fromMessages([\n  ['system', 'You are a helpful assistant that answers questions based on the provided context. Always cite your sources.'],\n  ['human', `Context information:\n{context}\n\nQuestion: {question}\n\nProvide a comprehensive answer based on the context above. If the context doesn't contain enough information, say so explicitly.`]\n]);\n\n// Context formatting function\nconst formatDocs = (docs) => {\n  return docs.map((doc, index) => \n    `[Source ${index + 1}: ${doc.metadata.source}]\n${doc.pageContent}`\n  ).join('\n\n');\n};\n\n// Advanced RAG chain with LCEL\nconst advancedRagChain = RunnableSequence.from([\n  {\n    context: (input) => retriever.getRelevantDocuments(input.question).then(formatDocs),\n    question: (input) => input.question,\n  },\n  advancedRagPrompt,\n  llm,\n  new StringOutputParser(),\n]);\n\n// Multi-query RAG for better retrieval\nconst multiQueryRag = RunnableSequence.from([\n  // Generate multiple query variations\n  {\n    queries: RunnableSequence.from([\n      ChatPromptTemplate.fromTemplate(\n        'Generate 3 different versions of this question for better document retrieval:\\n{question}'\n      ),\n      llm,\n      new StringOutputParser(),\n      (output) => output.split('\\n').filter(q => q.trim()),\n    ]),\n    originalQuestion: (input) => input.question,\n  },\n  // Retrieve documents for all queries\n  {\n    context: async (input) => {\n      const allDocs = [];\n      for (const query of input.queries) {\n        const docs = await retriever.getRelevantDocuments(query);\n        allDocs.push(...docs);\n      }\n      // Remove duplicates and format\n      const uniqueDocs = Array.from(new Set(allDocs.map(d => d.pageContent)))\n        .map(content => allDocs.find(d => d.pageContent === content));\n      return formatDocs(uniqueDocs.slice(0, 6));\n    },\n    question: (input) => input.originalQuestion,\n  },\n  advancedRagPrompt,\n  llm,\n  new StringOutputParser(),\n]);\n\n// Usage\nconst complexQuestion = 'How do modern AI systems handle uncertainty and what are the implications?';\nconst result = await advancedRagChain.invoke({ question: complexQuestion });\nconsole.log('Advanced RAG Response:', result);",
+      "demoFunction": "advancedRagLcelDemo"
+    },
+    {
+      "id": "conversational-rag",
+      "title": "Conversational RAG",
+      "description": "RAG system that maintains conversation history and context",
+      "category": "rag",
+      "codeSnippet": "import { ConversationalRetrievalQAChain } from 'langchain/chains';\nimport { BufferMemory } from 'langchain/memory';\n\n// Create conversational memory\nconst memory = new BufferMemory({\n  memoryKey: 'chat_history',\n  returnMessages: true,\n});\n\n// Conversational RAG chain\nconst conversationalRagChain = ConversationalRetrievalQAChain.fromLLM(\n  llm,\n  retriever,\n  {\n    memory,\n    returnSourceDocuments: true,\n    verbose: true,\n  }\n);\n\n// Custom conversational RAG with LCEL\nconst conversationalPrompt = ChatPromptTemplate.fromMessages([\n  ['system', 'You are a helpful assistant. Use the context and chat history to provide accurate answers.'],\n  ['human', `Chat History:\n{chat_history}\n\nContext:\n{context}\n\nCurrent Question: {question}`]\n]);\n\nclass ConversationalRAG {\n  constructor(llm, retriever) {\n    this.llm = llm;\n    this.retriever = retriever;\n    this.chatHistory = [];\n  }\n\n  async query(question) {\n    // Get relevant documents\n    const docs = await this.retriever.getRelevantDocuments(question);\n    const context = docs.map(doc => doc.pageContent).join('\\n\\n');\n    \n    // Format chat history\n    const chatHistoryStr = this.chatHistory\n      .map(msg => `${msg.type}: ${msg.content}`)\n      .join('\\n');\n\n    // Create chain\n    const chain = RunnableSequence.from([\n      conversationalPrompt,\n      this.llm,\n      new StringOutputParser(),\n    ]);\n\n    // Get response\n    const response = await chain.invoke({\n      question,\n      context,\n      chat_history: chatHistoryStr,\n    });\n\n    // Update chat history\n    this.chatHistory.push(\n      { type: 'Human', content: question },\n      { type: 'Assistant', content: response }\n    );\n\n    // Keep only last 10 exchanges\n    if (this.chatHistory.length > 20) {\n      this.chatHistory = this.chatHistory.slice(-20);\n    }\n\n    return {\n      answer: response,\n      sourceDocuments: docs,\n      chatHistory: this.chatHistory,\n    };\n  }\n\n  clearHistory() {\n    this.chatHistory = [];\n  }\n}\n\n// Usage\nconst conversationalRag = new ConversationalRAG(llm, retriever);\n\n// First question\nconst response1 = await conversationalRag.query('What is machine learning?');\nconsole.log('Response 1:', response1.answer);\n\n// Follow-up question (uses context from previous conversation)\nconst response2 = await conversationalRag.query('Can you give me more details about the types you mentioned?');\nconsole.log('Response 2:', response2.answer);",
+      "demoFunction": "conversationalRagDemo"
+    },
+    {
+      "id": "multi-modal-rag",
+      "title": "Multi-Modal RAG",
+      "description": "RAG system that processes text, images, and structured data",
+      "category": "rag",
+      "codeSnippet": "import { UnstructuredLoader } from 'langchain/document_loaders/fs/unstructured';\nimport { JSONLoader } from 'langchain/document_loaders/fs/json';\nimport { WebPDFLoader } from 'langchain/document_loaders/web/pdf';\n\n// Multi-modal document processing\nclass MultiModalRAG {\n  constructor(llm, embeddings) {\n    this.llm = llm;\n    this.embeddings = embeddings;\n    this.vectorStores = {\n      text: null,\n      structured: null,\n      metadata: null,\n    };\n  }\n\n  async processDocuments(documents) {\n    const textDocs = [];\n    const structuredDocs = [];\n    const imageDocs = [];\n\n    for (const doc of documents) {\n      if (doc.metadata.type === 'text') {\n        textDocs.push(doc);\n      } else if (doc.metadata.type === 'json' || doc.metadata.type === 'csv') {\n        structuredDocs.push(doc);\n      } else if (doc.metadata.type === 'image') {\n        imageDocs.push(doc);\n      }\n    }\n\n    // Create separate vector stores for different content types\n    if (textDocs.length > 0) {\n      this.vectorStores.text = await MemoryVectorStore.fromDocuments(\n        textDocs,\n        this.embeddings\n      );\n    }\n\n    if (structuredDocs.length > 0) {\n      // Process structured data differently\n      const processedStructured = structuredDocs.map(doc => ({\n        ...doc,\n        pageContent: this.formatStructuredData(doc.pageContent),\n      }));\n      \n      this.vectorStores.structured = await MemoryVectorStore.fromDocuments(\n        processedStructured,\n        this.embeddings\n      );\n    }\n\n    console.log('Multi-modal processing complete:', {\n      textDocuments: textDocs.length,\n      structuredDocuments: structuredDocs.length,\n      imageDocuments: imageDocs.length,\n    });\n  }\n\n  formatStructuredData(jsonContent) {\n    try {\n      const data = JSON.parse(jsonContent);\n      if (Array.isArray(data)) {\n        return data.map(item => \n          Object.entries(item)\n            .map(([key, value]) => `${key}: ${value}`)\n            .join(', ')\n        ).join('\\n');\n      }\n      return Object.entries(data)\n        .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)\n        .join('\\n');\n    } catch {\n      return jsonContent;\n    }\n  }\n\n  async hybridSearch(query, options = {}) {\n    const results = [];\n    const { includeText = true, includeStructured = true, k = 4 } = options;\n\n    if (includeText && this.vectorStores.text) {\n      const textResults = await this.vectorStores.text.similaritySearch(query, k);\n      results.push(...textResults.map(doc => ({ ...doc, type: 'text' })));\n    }\n\n    if (includeStructured && this.vectorStores.structured) {\n      const structuredResults = await this.vectorStores.structured.similaritySearch(query, k);\n      results.push(...structuredResults.map(doc => ({ ...doc, type: 'structured' })));\n    }\n\n    // Sort by relevance (simplified)\n    return results.slice(0, k * 2);\n  }\n\n  async query(question, options = {}) {\n    const relevantDocs = await this.hybridSearch(question, options);\n    \n    const context = relevantDocs\n      .map((doc, index) => `[${doc.type.toUpperCase()} - Source ${index + 1}]\\n${doc.pageContent}`)\n      .join('\\n\\n');\n\n    const prompt = `Based on the following multi-modal context (text and structured data), answer the question:\n\nContext:\n${context}\n\nQuestion: ${question}\n\nAnswer:`;\n\n    const response = await this.llm.invoke(prompt);\n    \n    return {\n      answer: response.content,\n      sources: relevantDocs.map(doc => ({\n        type: doc.type,\n        source: doc.metadata.source,\n        content: doc.pageContent.substring(0, 200) + '...',\n      })),\n    };\n  }\n}\n\n// Usage\nconst multiModalRag = new MultiModalRAG(llm, embeddings);\nawait multiModalRag.processDocuments(allDocuments);\n\nconst result = await multiModalRag.query('What are the sales trends for Q4?', {\n  includeText: true,\n  includeStructured: true,\n  k: 3,\n});\n\nconsole.log('Multi-modal RAG result:', result);",
+      "demoFunction": "multiModalRagDemo"
+    }
+  ]
+}
