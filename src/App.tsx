@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { TopicList, TopicDetail, LoadingSpinner } from './components';
-import { Topic, ExecutionResult, HealthStatus } from './types';
+import { Routes, Route } from 'react-router-dom';
+import { LoadingSpinner } from './components';
+import { Topic, HealthStatus } from './types';
+import HomePage from './pages/HomePage';
+import TopicDetailsPageRoute from './pages/TopicDetailsPageRoute';
 
 const API_BASE = '/api';
 
 function App() {
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
-  const [executing, setExecuting] = useState(false);
-  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
 
   useEffect(() => {
@@ -39,63 +39,39 @@ function App() {
     }
   };
 
-  const executeTopic = async (topicId: string) => {
-    setExecuting(true);
-    setExecutionResult(null);
-    
-    try {
-      const response = await fetch(`${API_BASE}/execute/${topicId}`, {
-        method: 'POST',
-      });
-      const result: ExecutionResult = await response.json();
-      setExecutionResult(result);
-    } catch (error: any) {
-      setExecutionResult({
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString(),
-      });
-    } finally {
-      setExecuting(false);
-    }
-  };
-
-  const handleTopicClick = (topic: Topic) => {
-    setSelectedTopic(topic);
-    setExecutionResult(null); // Clear previous execution result
-  };
-
-  const handleBackClick = () => {
-    setSelectedTopic(null);
-  };
-
   if (loading) {
     return (
-      <div className="container">
-        <LoadingSpinner message="Loading tutorial topics..." />
+      <div className="documentation-container">
+        <div className="doc-content">
+          <LoadingSpinner message="Loading tutorial topics..." />
+        </div>
       </div>
     );
   }
 
-  if (selectedTopic) {
-    return (
-      <TopicDetail
-        topic={selectedTopic}
-        healthStatus={healthStatus}
-        executing={executing}
-        executionResult={executionResult}
-        onBack={handleBackClick}
-        onExecute={executeTopic}
-      />
-    );
-  }
-
   return (
-    <TopicList
-      topics={topics}
-      healthStatus={healthStatus}
-      onTopicClick={handleTopicClick}
-    />
+    <div className="documentation-container">
+      <Routes>
+        <Route 
+          path="/" 
+          element={
+            <HomePage 
+              topics={topics} 
+              healthStatus={healthStatus} 
+            />
+          } 
+        />
+        <Route 
+          path="/topic/:topicId" 
+          element={
+            <TopicDetailsPageRoute 
+              topics={topics} 
+              healthStatus={healthStatus} 
+            />
+          } 
+        />
+      </Routes>
+    </div>
   );
 }
 

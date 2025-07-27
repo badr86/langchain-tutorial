@@ -1,0 +1,60 @@
+{
+  "company": "TechCorp AI Solutions",
+  "founded": 2020,
+  "headquarters": "San Francisco, CA",
+  "employees": 150,
+  "products": [
+    {
+      "name": "AI Assistant Pro",
+      "category": "Natural Language Processing",
+      "description": "Advanced conversational AI for customer support",
+      "price": 299,
+      "features": [
+        "Multi-language support",
+        "Custom training",
+        "API integration"
+      ]
+    },
+    {
+      "name": "Vision Analytics",
+      "category": "Computer Vision",
+      "description": "Real-time image and video analysis platform",
+      "price": 599,
+      "features": [
+        "Object detection",
+        "Facial recognition",
+        "Anomaly detection"
+      ]
+    },
+    {
+      "name": "Predictive Insights",
+      "category": "Machine Learning",
+      "description": "Predictive analytics for business intelligence",
+      "price": 899,
+      "features": [
+        "Time series forecasting",
+        "Risk assessment",
+        "Custom models"
+      ]
+    }
+  ],
+  "technologies": [
+    "Python",
+    "TensorFlow",
+    "PyTorch",
+    "OpenAI",
+    "LangChain"
+  ],
+  "markets": [
+    "Healthcare",
+    "Finance",
+    "Retail",
+    "Manufacturing"
+  ],
+  "revenue": {
+    "2020": 500000,
+    "2021": 1200000,
+    "2022": 2800000,
+    "2023": 5200000
+  }
+}

@@ -1,0 +1,28 @@
+# Introduction to Artificial Intelligence
+
+Artificial Intelligence (AI) is a branch of computer science that aims to create intelligent machines that can perform tasks that typically require human intelligence. These tasks include learning, reasoning, problem-solving, perception, and language understanding.
+
+## History of AI
+
+The field of AI was founded in 1956 at a conference at Dartmouth College. Early pioneers like Alan Turing, John McCarthy, and Marvin Minsky laid the groundwork for what would become one of the most transformative technologies of our time.
+
+## Types of AI
+
+1. **Narrow AI**: AI systems designed for specific tasks (like image recognition or chess playing)
+2. **General AI**: Hypothetical AI that could perform any intellectual task that a human can do
+3. **Superintelligence**: AI that surpasses human intelligence in all domains
+
+## Applications
+
+AI is used in various fields including:
+- Healthcare: Diagnosis and treatment recommendations
+- Finance: Fraud detection and algorithmic trading
+- Transportation: Autonomous vehicles
+- Entertainment: Recommendation systems
+- Education: Personalized learning platforms
+
+## Future of AI
+
+The future of AI holds great promise but also presents challenges. As AI systems become more sophisticated, we must address ethical considerations, job displacement, and the need for responsible AI development.
+
+AI will continue to transform industries and society, making it crucial for individuals and organizations to understand and adapt to these changes.

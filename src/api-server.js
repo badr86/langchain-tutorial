@@ -1,8 +1,18 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Configure dotenv
+dotenv.config();
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(cors());
@@ -26,7 +36,7 @@ try {
     topicsData = { prompts: [], chains: [], memory: [], agents: [], rag: [] };
 }
 
-// Flatten all topics into a single array
+// Flatten all topics into a single array with capabilities metadata
 const getAllTopics = () => {
     const allTopics = [];
     
@@ -46,16 +56,31 @@ const getAllTopics = () => {
         allTopics.push(...topicsData.rag);
     }
     
-    return allTopics;
+    // Use capabilities data directly from JSON, fallback to file extraction if not present
+    return allTopics.map(topic => {
+        if (topic.capabilities) {
+            // Use capabilities data directly from JSON
+            return topic;
+        } else if (topic.demoFile) {
+            // Fallback: extract capabilities from demo file
+            const capabilities = extractCapabilities(topic.demoFile);
+            return {
+                ...topic,
+                capabilities: capabilities
+            };
+        }
+        return topic;
+    });
 };
 
 // Import required LangChain modules
-const { PromptTemplate, ChatPromptTemplate, FewShotPromptTemplate } = require('@langchain/core/prompts');
-const { ChatOpenAI, OpenAI } = require('@langchain/openai');
-const { StringOutputParser } = require('@langchain/core/output_parsers');
-const { RunnableSequence, RunnableMap } = require('@langchain/core/runnables');
-const { BufferMemory, BufferWindowMemory } = require('langchain/memory');
-const { ConversationChain } = require('langchain/chains');
+import { PromptTemplate, ChatPromptTemplate, FewShotPromptTemplate } from '@langchain/core/prompts';
+import { ChatOpenAI, OpenAI } from '@langchain/openai';
+import { StringOutputParser } from '@langchain/core/output_parsers';
+import { RunnableSequence, RunnableMap } from '@langchain/core/runnables';
+import { BufferMemory, BufferWindowMemory } from 'langchain/memory';
+import { ConversationChain } from 'langchain/chains';
+import { extractCapabilities } from './utils/capabilitiesExtractor.js';
 
 // Initialize OpenAI models (will check for API key in each function)
 const createLLM = () => {
@@ -69,303 +94,80 @@ const createLLM = () => {
     });
 };
 
-// Demo function registry - maps function names to actual functions
-const demoFunctions = {
-    // Prompt Template Demos
-    basicPromptTemplateDemo: async () => {
-        console.log('🚀 Executing Basic Prompt Template Demo...');
+// Demo files are now specified directly in topics.json as 'demoFile' property
+
+// File-based demo execution system - no legacy inline functions needed.
+
+// Execute demo file and capture output
+const executeDemoFile = async (filePath) => {
+    return new Promise((resolve) => {
+        const fullPath = path.join(__dirname, '..', filePath);
         
-        const template = "Tell me a {adjective} joke about {topic}.";
-        const prompt = new PromptTemplate({
-            template: template,
-            inputVariables: ["adjective", "topic"],
-        });
-
-        const formattedPrompt = await prompt.format({
-            adjective: "funny",
-            topic: "programming"
-        });
-
-        console.log('📝 Formatted Prompt:', formattedPrompt);
-        
-        if (process.env.OPENAI_API_KEY) {
-            const llm = createLLM();
-            const response = await llm.invoke(formattedPrompt);
-            console.log('🤖 AI Response:', response.content);
-        } else {
-            console.log('⚠️  OpenAI API Key not found. Showing formatted prompt only.');
-        }
-    },
-
-    chatPromptTemplateDemo: async () => {
-        console.log('🚀 Executing Chat Prompt Template Demo...');
-        
-        const chatPrompt = ChatPromptTemplate.fromMessages([
-            ["system", "You are a helpful assistant that translates {input_language} to {output_language}."],
-            ["human", "{text}"]
-        ]);
-
-        const formattedMessages = await chatPrompt.formatMessages({
-            input_language: "English",
-            output_language: "French",
-            text: "I love programming."
-        });
-
-        console.log('📝 Formatted Messages:', formattedMessages.map(m => `${m._getType()}: ${m.content}`));
-        
-        if (process.env.OPENAI_API_KEY) {
-            const llm = createLLM();
-            const response = await llm.invoke(formattedMessages);
-            console.log('🤖 AI Translation:', response.content);
-        } else {
-            console.log('⚠️  OpenAI API Key not found. Showing formatted messages only.');
-        }
-    },
-
-    complexPromptTemplateDemo: async () => {
-        console.log('🚀 Executing Complex Prompt Template Demo...');
-        
-        const complexTemplate = `You are an expert {role} with {experience} years of experience.
-
-Task: {task}
-
-Context:
-{context}
-
-Instructions:
-1. Analyze the given information
-2. Provide a detailed response
-3. Include specific examples
-4. Conclude with actionable recommendations
-
-Response:`;
-
-        const prompt = new PromptTemplate({
-            template: complexTemplate,
-            inputVariables: ["role", "experience", "task", "context"],
-        });
-
-        const formattedPrompt = await prompt.format({
-            role: "Software Architect",
-            experience: "10",
-            task: "Design a scalable microservices architecture",
-            context: "E-commerce platform with 1M+ users, high traffic during sales events"
-        });
-
-        console.log('📝 Complex Prompt Generated');
-        
-        if (process.env.OPENAI_API_KEY) {
-            const llm = createLLM();
-            const response = await llm.invoke(formattedPrompt);
-            console.log('🤖 Expert Analysis:', response.content.substring(0, 300) + '...');
-        } else {
-            console.log('⚠️  OpenAI API Key not found. Complex prompt template created successfully.');
-        }
-    },
-
-    conditionalPromptTemplateDemo: async () => {
-        console.log('🚀 Executing Conditional Prompt Template Demo...');
-        
-        const createConditionalPrompt = (audience) => {
-            const templates = {
-                beginner: "Explain {topic} in simple terms with basic examples.",
-                intermediate: "Provide a detailed explanation of {topic} with practical applications.",
-                expert: "Give an advanced analysis of {topic} including edge cases and optimizations."
-            };
-            
-            return new PromptTemplate({
-                template: templates[audience] || templates.intermediate,
-                inputVariables: ["topic"]
+        // Check if file exists
+        if (!fs.existsSync(fullPath)) {
+            resolve({
+                success: false,
+                output: '',
+                error: `Demo file not found: ${filePath}`
             });
-        };
-
-        const beginnerPrompt = createConditionalPrompt('beginner');
-        const formattedPrompt = await beginnerPrompt.format({ topic: 'machine learning' });
-        
-        console.log('📝 Conditional Prompt (Beginner Level):', formattedPrompt);
-        
-        if (process.env.OPENAI_API_KEY) {
-            const llm = createLLM();
-            const response = await llm.invoke(formattedPrompt);
-            console.log('🤖 Beginner-Friendly Explanation:', response.content.substring(0, 200) + '...');
-        } else {
-            console.log('⚠️  OpenAI API Key not found. Conditional prompt created successfully.');
-        }
-    },
-
-    fewShotPromptTemplateDemo: async () => {
-        console.log('🚀 Executing Few-Shot Prompt Template Demo...');
-        
-        const examples = [
-            { input: "happy", output: "sad" },
-            { input: "tall", output: "short" },
-            { input: "fast", output: "slow" }
-        ];
-
-        const examplePrompt = PromptTemplate.fromTemplate(
-            "Input: {input}\nOutput: {output}"
-        );
-
-        const fewShotPrompt = new FewShotPromptTemplate({
-            examples: examples,
-            examplePrompt: examplePrompt,
-            prefix: "Give the antonym of the word.",
-            suffix: "Input: {adjective}\nOutput:",
-            inputVariables: ["adjective"],
-        });
-
-        const formattedPrompt = await fewShotPrompt.format({ adjective: "bright" });
-        console.log('📝 Few-Shot Prompt:', formattedPrompt);
-        
-        if (process.env.OPENAI_API_KEY) {
-            const llm = createLLM();
-            const response = await llm.invoke(formattedPrompt);
-            console.log('🤖 AI Antonym:', response.content.trim());
-        } else {
-            console.log('⚠️  OpenAI API Key not found. Few-shot prompt created successfully.');
-        }
-    },
-
-    promptTemplateWithOpenAIDemo: async () => {
-        console.log('🚀 Executing OpenAI Integration Demo...');
-        
-        if (!process.env.OPENAI_API_KEY) {
-            console.log('⚠️  OPENAI_API_KEY is required for this demo');
             return;
         }
-
-        const llm = createLLM();
-        const prompt = new PromptTemplate({
-            template: "Write a creative {length} story about {character} who discovers {discovery}.",
-            inputVariables: ["length", "character", "discovery"],
-        });
-
-        const chain = prompt.pipe(llm).pipe(new StringOutputParser());
-
-        const result = await chain.invoke({
-            length: "short",
-            character: "a young scientist",
-            discovery: "a portal to parallel dimensions"
-        });
-
-        console.log('🤖 Generated Story:', result);
-    },
-
-    // Chain & LCEL Demos
-    basicLLMChainDemo: async () => {
-        console.log('🚀 Executing Basic LLM Chain Demo...');
         
-        if (!process.env.OPENAI_API_KEY) {
-            console.log('⚠️  OPENAI_API_KEY is required for this demo');
-            return;
-        }
-
-        const llm = createLLM();
-        const prompt = new PromptTemplate({
-            template: "Explain {concept} in simple terms.",
-            inputVariables: ["concept"],
-        });
-
-        const chain = prompt.pipe(llm).pipe(new StringOutputParser());
-        const result = await chain.invoke({ concept: "quantum computing" });
+        console.log(`Executing demo file: ${fullPath}`);
         
-        console.log('🤖 Chain Result:', result);
-    },
-
-    simpleLCELChainDemo: async () => {
-        console.log('🚀 Executing Simple LCEL Chain Demo...');
+        // Execute ES6 module file
+        const child = spawn('node', [fullPath], {
+            cwd: path.join(__dirname, '..'),
+            env: { ...process.env },
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
         
-        if (!process.env.OPENAI_API_KEY) {
-            console.log('⚠️  OPENAI_API_KEY is required for this demo');
-            return;
-        }
-
-        const llm = createLLM();
-        const prompt = ChatPromptTemplate.fromTemplate(
-            "Translate the following text to {target_language}: {text}"
-        );
-
-        // LCEL Chain using pipe operator
-        const chain = prompt.pipe(llm).pipe(new StringOutputParser());
-
-        const result = await chain.invoke({
-            text: "Hello, how are you today?",
-            target_language: "Spanish"
-        });
-
-        console.log('🤖 LCEL Translation:', result);
-    },
-
-    // Memory Demos
-    basicBufferMemoryDemo: async () => {
-        console.log('🚀 Executing Basic Buffer Memory Demo...');
+        let output = '';
+        let errorOutput = '';
         
-        if (!process.env.OPENAI_API_KEY) {
-            console.log('⚠️  OPENAI_API_KEY is required for this demo');
-            return;
-        }
-
-        const llm = createLLM();
-        const memory = new BufferMemory({
-            memoryKey: "chat_history",
-            returnMessages: true,
+        child.stdout.on('data', (data) => {
+            const text = data.toString();
+            output += text;
+            console.log(text.trim()); // Also log to server console
         });
-
-        const conversation = new ConversationChain({
-            llm: llm,
-            memory: memory,
+        
+        child.stderr.on('data', (data) => {
+            const text = data.toString();
+            errorOutput += text;
+            console.error(text.trim()); // Also log to server console
         });
-
-        // First interaction
-        const response1 = await conversation.call({
-            input: "Hi, my name is Alice and I'm a software engineer."
+        
+        child.on('close', (code) => {
+            resolve({
+                success: code === 0,
+                output: output || 'Demo executed successfully!',
+                error: code !== 0 ? (errorOutput || `Process exited with code ${code}`) : null
+            });
         });
-        console.log('🤖 Response 1:', response1.response);
-
-        // Second interaction (should remember Alice)
-        const response2 = await conversation.call({
-            input: "What's my profession?"
+        
+        child.on('error', (error) => {
+            resolve({
+                success: false,
+                output: '',
+                error: `Failed to execute demo: ${error.message}`
+            });
         });
-        console.log('🤖 Response 2 (with memory):', response2.response);
-    },
-
-    // Agent Demos (simplified for now)
-    basicReactAgentDemo: async () => {
-        console.log('🚀 Executing Basic ReAct Agent Demo...');
-        console.log('🤖 Agent Demo: This would create a ReAct agent with tools like Calculator and Search');
-        console.log('📝 Note: Full agent implementation requires additional tool setup');
-    },
-
-    // RAG Demos (simplified for now)
-    basicDocumentLoadingDemo: async () => {
-        console.log('🚀 Executing Basic Document Loading Demo...');
-        console.log('📄 Document Loading: This would load PDF, DOCX, and TXT files');
-        console.log('📝 Note: Full RAG implementation requires document files and vector storage');
-    },
-
-    // Add placeholder implementations for other functions
-    complexLCELChainDemo: async () => console.log('🚀 Complex LCEL Chain Demo executed'),
-    lcelWithCustomFunctionsDemo: async () => console.log('🚀 LCEL with Custom Functions Demo executed'),
-    parallelLCELChainsDemo: async () => console.log('🚀 Parallel LCEL Chains Demo executed'),
-    conditionalLCELChainDemo: async () => console.log('🚀 Conditional LCEL Chain Demo executed'),
-    bufferWindowMemoryDemo: async () => console.log('🚀 Buffer Window Memory Demo executed'),
-    conversationSummaryMemoryDemo: async () => console.log('🚀 Conversation Summary Memory Demo executed'),
-    customMemoryLCELDemo: async () => console.log('🚀 Custom Memory LCEL Demo executed'),
-    memoryComparisonDemo: async () => console.log('🚀 Memory Comparison Demo executed'),
-    customToolsDemo: async () => console.log('🚀 Custom Tools Demo executed'),
-    functionCallingAgentDemo: async () => console.log('🚀 Function Calling Agent Demo executed'),
-    multiAgentSystemDemo: async () => console.log('🚀 Multi-Agent System Demo executed'),
-    agentWithMemoryDemo: async () => console.log('🚀 Agent with Memory Demo executed'),
-    advancedToolIntegrationDemo: async () => console.log('🚀 Advanced Tool Integration Demo executed'),
-    textSplittingDemo: async () => console.log('🚀 Text Splitting Demo executed'),
-    vectorEmbeddingsDemo: async () => console.log('🚀 Vector Embeddings Demo executed'),
-    basicRagChainDemo: async () => console.log('🚀 Basic RAG Chain Demo executed'),
-    advancedRagLcelDemo: async () => console.log('🚀 Advanced RAG LCEL Demo executed'),
-    conversationalRagDemo: async () => console.log('🚀 Conversational RAG Demo executed'),
-    multiModalRagDemo: async () => console.log('🚀 Multi-Modal RAG Demo executed')
+        
+        // Set a timeout to prevent hanging
+        setTimeout(() => {
+            if (!child.killed) {
+                child.kill();
+                resolve({
+                    success: false,
+                    output: output,
+                    error: 'Demo execution timed out after 30 seconds'
+                });
+            }
+        }, 30000);
+    });
 };
 
-// Capture console output for demo execution
+// Capture console output for demo execution (legacy function)
 const captureConsoleOutput = async (fn) => {
     const originalLog = console.log;
     const originalError = console.error;
@@ -426,28 +228,46 @@ app.post('/api/execute/:id', async (req, res) => {
             return res.status(404).json({ error: 'Topic not found' });
         }
         
-        const demoFunction = demoFunctions[topic.demoFunction];
-        if (!demoFunction) {
-            return res.status(404).json({ 
-                error: 'Demo function not found',
-                output: `Demo function "${topic.demoFunction}" is not implemented yet.`
+        console.log(`Executing demo: ${topic.demoFunction}`);
+        
+        // Execute using the file-based system from topics.json
+        const demoFilePath = topic.demoFile;
+        console.log(`Demo file path for ${topic.demoFunction}:`, demoFilePath);
+        
+        if (demoFilePath) {
+            console.log(`Using file-based execution: ${demoFilePath}`);
+            const result = await executeDemoFile(demoFilePath);
+            console.log('File execution result:', result);
+            
+            res.json({
+                success: result.success,
+                output: result.output || `Demo "${topic.title}" executed successfully!`,
+                error: result.error || null,
+                timestamp: new Date().toISOString()
             });
+            return;
         }
         
-        console.log(`Executing demo: ${topic.demoFunction}`);
-        const result = await captureConsoleOutput(demoFunction);
+        // No demo file found - return error
+        return res.status(404).json({ 
+            error: 'Demo file not found',
+            output: `Demo file for "${topic.demoFunction}" is not implemented yet. Please check that the demo file exists at the specified path.`,
+            timestamp: new Date().toISOString()
+        });
         
         res.json({
             success: result.success,
             output: result.output || `Demo "${topic.title}" executed successfully!`,
-            error: result.error || null
+            error: result.error || null,
+            timestamp: new Date().toISOString()
         });
     } catch (error) {
         console.error('Error executing demo:', error);
         res.status(500).json({ 
             success: false, 
             output: '', 
-            error: error.message 
+            error: error.message,
+            timestamp: new Date().toISOString()
         });
     }
 });
