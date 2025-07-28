@@ -29,11 +29,12 @@ try {
         chains: topicsData.chains?.length || 0,
         memory: topicsData.memory?.length || 0,
         agents: topicsData.agents?.length || 0,
-        rag: topicsData.rag?.length || 0
+        rag: topicsData.rag?.length || 0,
+        workshop: topicsData.workshop?.length || 0
     });
 } catch (error) {
     console.error('Error loading topics:', error.message);
-    topicsData = { prompts: [], chains: [], memory: [], agents: [], rag: [] };
+    topicsData = { prompts: [], chains: [], memory: [], agents: [], rag: [], workshop: [] };
 }
 
 // Flatten all topics into a single array with capabilities metadata
@@ -54,6 +55,9 @@ const getAllTopics = () => {
     }
     if (topicsData.rag) {
         allTopics.push(...topicsData.rag);
+    }
+    if (topicsData.workshop) {
+        allTopics.push(...topicsData.workshop);
     }
     
     // Use capabilities data directly from JSON, fallback to file extraction if not present

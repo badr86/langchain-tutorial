@@ -809,7 +809,7 @@
       "title": "Agent with Memory",
       "description": "Persistent agent that remembers previous interactions",
       "category": "agents",
-      "codeSnippet": "import { BufferMemory } from 'langchain/memory';\nimport { ConversationChain } from 'langchain/chains';\n\n// Create agent with persistent memory\nclass MemoryAgent {\n  constructor(llm, tools) {\n    this.memory = new BufferMemory({\n      memoryKey: 'chat_history',\n      returnMessages: true,\n    });\n    \n    this.agent = new AgentExecutor({\n      agent: await createReactAgent({ llm, tools, prompt }),\n      tools,\n      memory: this.memory,\n      verbose: true,\n    });\n  }\n\n  async chat(input) {\n    const result = await this.agent.invoke({\n      input,\n      chat_history: await this.memory.chatHistory.getMessages(),\n    });\n    \n    // Save interaction to memory\n    await this.memory.saveContext(\n      { input },\n      { output: result.output }\n    );\n    \n    return result.output;\n  }\n\n  async getMemory() {\n    return await this.memory.chatHistory.getMessages();\n  }\n\n  clearMemory() {\n    this.memory.clear();\n  }\n}\n\n// Usage example\nconst memoryAgent = new MemoryAgent(llm, tools);\n\n// First interaction\nconst response1 = await memoryAgent.chat(\n  'My name is Alice and I work as a software engineer.'\n);\n\n// Second interaction - agent remembers previous context\nconst response2 = await memoryAgent.chat(\n  'What did I tell you about my profession?'\n);\n\n// Check memory\nconst memory = await memoryAgent.getMemory();\nconsole.log('Agent memory:', memory);",
+      "codeSnippet": "import { BufferMemory } from 'langchain/memory';\nimport { ConversationChain } from 'langchain/chains';\n\n// Create agent with persistent memory\nclass MemoryAgent {\n  constructor(llm, tools) {\n    this.memory = new BufferMemory({\n      memoryKey: 'chat_history',\n      returnMessages: true,\n    });\n    \n    this.agent = new AgentExecutor({\n      agent: await createReactAgent({ llm, tools, prompt }),\n      tools: tools,\n      memory: this.memory,\n      verbose: true,\n    });\n  }\n\n  async chat(input) {\n    const result = await this.agent.invoke({\n      input,\n      chat_history: await this.memory.chatHistory.getMessages(),\n    });\n    \n    // Save interaction to memory\n    await this.memory.saveContext(\n      { input },\n      { output: result.output }\n    );\n    \n    return result.output;\n  }\n\n  async getMemory() {\n    return await this.memory.chatHistory.getMessages();\n  }\n\n  clearMemory() {\n    this.memory.clear();\n  }\n}\n\n// Usage example\nconst memoryAgent = new MemoryAgent(llm, tools);\n\n// First interaction\nconst response1 = await memoryAgent.chat(\n  'My name is Alice and I work as a software engineer.'\n);\n\n// Second interaction - agent remembers previous context\nconst response2 = await memoryAgent.chat(\n  'What did I tell you about my profession?'\n);\n\n// Check memory\nconst memory = await memoryAgent.getMemory();\nconsole.log('Agent memory:', memory);",
       "demoFunction": "agentWithMemoryDemo",
       "demoFile": "src/demos/agents/agent-with-memory.js",
       "capabilities": {
@@ -1037,7 +1037,7 @@
     {
       "id": "advanced-rag-lcel",
       "title": "Advanced RAG with LCEL",
-      "description": "Build sophisticated RAG systems using LangChain Expression Language",
+      "description": "Build sophisticated RAG pipelines using LangChain Expression Language",
       "category": "rag",
       "codeSnippet": "import { RunnableSequence, RunnableMap } from '@langchain/core/runnables';\nimport { StringOutputParser } from '@langchain/core/output_parsers';\nimport { ChatPromptTemplate } from '@langchain/core/prompts';\n\n// Advanced RAG prompt with context formatting\nconst advancedRagPrompt = ChatPromptTemplate.fromMessages([\n  ['system', 'You are a helpful assistant that answers questions based on the provided context. Always cite your sources.'],\n  ['human', `Context information:\n{context}\n\nQuestion: {question}\n\nProvide a comprehensive answer based on the context above. If the context doesn't contain enough information, say so explicitly.`]\n]);\n\n// Context formatting function\nconst formatDocs = (docs) => {\n  return docs.map((doc, index) => \n    `[Source ${index + 1}: ${doc.metadata.source}]\n${doc.pageContent}`\n  ).join('\n\n');\n};\n\n// Advanced RAG chain with LCEL\nconst advancedRagChain = RunnableSequence.from([\n  {\n    context: (input) => retriever.getRelevantDocuments(input.question).then(formatDocs),\n    question: (input) => input.question,\n  },\n  advancedRagPrompt,\n  llm,\n  new StringOutputParser(),\n]);\n\n// Multi-query RAG for better retrieval\nconst multiQueryRag = RunnableSequence.from([\n  // Generate multiple query variations\n  {\n    queries: RunnableSequence.from([\n      ChatPromptTemplate.fromTemplate(\n        'Generate 3 different versions of this question for better document retrieval:\\n{question}'\n      ),\n      llm,\n      new StringOutputParser(),\n      (output) => output.split('\\n').filter(q => q.trim()),\n    ]),\n    originalQuestion: (input) => input.question,\n  },\n  // Retrieve documents for all queries\n  {\n    context: async (input) => {\n      const allDocs = [];\n      for (const query of input.queries) {\n        const docs = await retriever.getRelevantDocuments(query);\n        allDocs.push(...docs);\n      }\n      // Remove duplicates and format\n      const uniqueDocs = Array.from(new Set(allDocs.map(d => d.pageContent)))\n        .map(content => allDocs.find(d => d.pageContent === content));\n      return formatDocs(uniqueDocs.slice(0, 6));\n    },\n    question: (input) => input.originalQuestion,\n  },\n  advancedRagPrompt,\n  llm,\n  new StringOutputParser(),\n]);\n\n// Usage\nconst complexQuestion = 'How do modern AI systems handle uncertainty and what are the implications?';\nconst result = await advancedRagChain.invoke({ question: complexQuestion });\nconsole.log('Advanced RAG Response:', result);",
       "demoFunction": "advancedRagLcelDemo",
@@ -1115,7 +1115,7 @@
       "title": "Multi-Modal RAG",
       "description": "RAG system that processes text, images, and structured data",
       "category": "rag",
-      "codeSnippet": "import { UnstructuredLoader } from 'langchain/document_loaders/fs/unstructured';\nimport { JSONLoader } from 'langchain/document_loaders/fs/json';\nimport { WebPDFLoader } from 'langchain/document_loaders/web/pdf';\n\n// Multi-modal document processing\nclass MultiModalRAG {\n  constructor(llm, embeddings) {\n    this.llm = llm;\n    this.embeddings = embeddings;\n    this.vectorStores = {\n      text: null,\n      structured: null,\n      metadata: null,\n    };\n  }\n\n  async processDocuments(documents) {\n    const textDocs = [];\n    const structuredDocs = [];\n    const imageDocs = [];\n\n    for (const doc of documents) {\n      if (doc.metadata.type === 'text') {\n        textDocs.push(doc);\n      } else if (doc.metadata.type === 'json' || doc.metadata.type === 'csv') {\n        structuredDocs.push(doc);\n      } else if (doc.metadata.type === 'image') {\n        imageDocs.push(doc);\n      }\n    }\n\n    // Create separate vector stores for different content types\n    if (textDocs.length > 0) {\n      this.vectorStores.text = await MemoryVectorStore.fromDocuments(\n        textDocs,\n        this.embeddings\n      );\n    }\n\n    if (structuredDocs.length > 0) {\n      // Process structured data differently\n      const processedStructured = structuredDocs.map(doc => ({\n        ...doc,\n        pageContent: this.formatStructuredData(doc.pageContent),\n      }));\n      \n      this.vectorStores.structured = await MemoryVectorStore.fromDocuments(\n        processedStructured,\n        this.embeddings\n      );\n    }\n\n    console.log('Multi-modal processing complete:', {\n      textDocuments: textDocs.length,\n      structuredDocuments: structuredDocs.length,\n      imageDocuments: imageDocs.length,\n    });\n  }\n\n  formatStructuredData(jsonContent) {\n    try {\n      const data = JSON.parse(jsonContent);\n      if (Array.isArray(data)) {\n        return data.map(item => \n          Object.entries(item)\n            .map(([key, value]) => `${key}: ${value}`)\n            .join(', ')\n        ).join('\\n');\n      }\n      return Object.entries(data)\n        .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)\n        .join('\\n');\n    } catch {\n      return jsonContent;\n    }\n  }\n\n  async hybridSearch(query, options = {}) {\n    const results = [];\n    const { includeText = true, includeStructured = true, k = 4 } = options;\n\n    if (includeText && this.vectorStores.text) {\n      const textResults = await this.vectorStores.text.similaritySearch(query, k);\n      results.push(...textResults.map(doc => ({ ...doc, type: 'text' })));\n    }\n\n    if (includeStructured && this.vectorStores.structured) {\n      const structuredResults = await this.vectorStores.structured.similaritySearch(query, k);\n      results.push(...structuredResults.map(doc => ({ ...doc, type: 'structured' })));\n    }\n\n    // Sort by relevance (simplified)\n    return results.slice(0, k * 2);\n  }\n\n  async query(question, options = {}) {\n    const relevantDocs = await this.hybridSearch(question, options);\n    \n    const context = relevantDocs\n      .map((doc, index) => `[${doc.type.toUpperCase()} - Source ${index + 1}]\\n${doc.pageContent}`)\n      .join('\\n\\n');\n\n    const prompt = `Based on the following multi-modal context (text and structured data), answer the question:\n\nContext:\n${context}\n\nQuestion: ${question}\n\nAnswer:`;\n\n    const response = await this.llm.invoke(prompt);\n    \n    return {\n      answer: response.content,\n      sources: relevantDocs.map(doc => ({\n        type: doc.type,\n        source: doc.metadata.source,\n        content: doc.pageContent.substring(0, 200) + '...',\n      })),\n    };\n  }\n}\n\n// Usage\nconst multiModalRag = new MultiModalRAG(llm, embeddings);\nawait multiModalRag.processDocuments(allDocuments);\n\nconst result = await multiModalRag.query('What are the sales trends for Q4?', {\n  includeText: true,\n  includeStructured: true,\n  k: 3,\n});\n\nconsole.log('Multi-modal RAG result:', result);",
+      "codeSnippet": "import { UnstructuredLoader } from 'langchain/document_loaders/fs/unstructured';\nimport { JSONLoader } from 'langchain/document_loaders/fs/json';\nimport { WebPDFLoader } from 'langchain/document_loaders/web/pdf';\n\n// Multi-modal document processing\nclass MultiModalRAG {\n  constructor(llm, embeddings) {\n    this.llm = llm;\n    this.embeddings = embeddings;\n    this.vectorStores = {\n      text: null,\n      structured: null,\n      metadata: null,\n    };\n  }\n\n  async processDocuments(documents) {\n    const textDocs = [];\n    const structuredDocs = [];\n    const imageDocs = [];\n\n    for (const doc of documents) {\n      if (doc.metadata.type === 'text') {\n        textDocs.push(doc);\n      } else if (doc.metadata.type === 'json' || doc.metadata.type === 'csv') {\n        structuredDocs.push(doc);\n      } else if (doc.metadata.type === 'image') {\n        imageDocs.push(doc);\n      }\n    }\n\n    // Create separate vector stores for different content types\n    if (textDocs.length > 0) {\n      this.vectorStores.text = await MemoryVectorStore.fromDocuments(\n        textDocs,\n        this.embeddings\n      );\n    }\n\n    if (structuredDocs.length > 0) {\n      // Process structured data differently\n      const processedStructured = structuredDocs.map(doc => ({\n        ...doc,\n        pageContent: this.formatStructuredData(doc.pageContent),\n      }));\n      \n      this.vectorStores.structured = await MemoryVectorStore.fromDocuments(\n        processedStructured,\n        this.embeddings\n      );\n    }\n\n    console.log('Multi-modal processing complete:', {\n      textDocuments: textDocs.length,\n      structuredDocuments: structuredDocs.length,\n      imageDocuments: imageDocs.length,\n    });\n  }\n\n  formatStructuredData(jsonContent) {\n    try {\n      const data = JSON.parse(jsonContent);\n      if (Array.isArray(data)) {\n        return data.map(item => \n          Object.entries(item)\n            .map(([key, value]) => `${key}: ${value}`)\n            .join(', ')\n        ).join('\\n');\n      }\n      return Object.entries(data)\n        .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)\n        .join('\\n');\n    } catch {\n      return jsonContent;\n    }\n  }\n\n  async hybridSearch(query, options = {}) {\n    const results = [];\n    const { includeText = true, includeStructured = true, k = 4 } = options;\n\n    if (includeText && this.vectorStores.text) {\n      const textResults = await this.vectorStores.text.similaritySearch(query, k);\n      results.push(...textResults.map(doc => ({ ...doc, type: 'text' })));\n    }\n\n    if (includeStructured && this.vectorStores.structured) {\n      const structuredResults = await this.vectorStores.structured.similaritySearch(query, k);\n      results.push(...structuredResults.map(doc => ({ ...doc, type: 'structured' })));\n    }\n\n    // Sort by relevance (simplified)\n    return results.slice(0, k * 2);\n  }\n\n  async query(question, options = {}) {\n    const relevantDocs = await this.hybridSearch(question, options);\n    \n    const context = relevantDocs\n      .map((doc, index) => `[${doc.type.toUpperCase()} - Source ${index + 1}]\\n${doc.pageContent}`)\n      .join('\\n\\n');\n\n    const prompt = `Based on this multi-modal context (text and structured data), answer the question:\n\nContext:\n${context}\n\nQuestion: ${question}\n\nAnswer:`;\n\n    const response = await this.llm.invoke(prompt);\n    \n    return {\n      answer: response.content,\n      sources: relevantDocs.map(doc => ({\n        type: doc.type,\n        source: doc.metadata.source,\n        content: doc.pageContent.substring(0, 200) + '...',\n      })),\n    };\n  }\n}\n\n// Usage\nconst multiModalRag = new MultiModalRAG(llm, embeddings);\nawait multiModalRag.processDocuments(allDocuments);\n\nconst result = await multiModalRag.query('What are the sales trends for Q4?', {\n  includeText: true,\n  includeStructured: true,\n  k: 3,\n});\n\nconsole.log('Multi-modal RAG result:', result);",
       "demoFunction": "multiModalRagDemo",
       "demoFile": "src/demos/rag/multi-modal-rag.js",
       "capabilities": {
@@ -1145,6 +1145,288 @@
           "Requires careful architecture for optimal performance",
           "Enables truly comprehensive AI-powered data analysis",
           "Foundation for next-generation knowledge management"
+        ]
+      }
+    }
+  ],
+  "workshop": [
+    {
+      "id": "travel-prompt-basic",
+      "title": "Travel Prompt Template",
+      "description": "Build your first travel planning prompt with multiple variables",
+      "category": "workshop",
+      "codeSnippet": "const travelPrompt = new PromptTemplate({\n    template: `You are an expert travel planner. Create a personalized {duration} travel itinerary for {destination}.\n\nTraveler Profile:\n- Budget: {budget}\n- Travel Style: {travelStyle}\n- Interests: {interests}\n- Group Size: {groupSize}\n- Special Requirements: {specialRequirements}\n\nPlease provide:\n1. Daily itinerary with activities\n2. Accommodation recommendations\n3. Transportation suggestions\n4. Budget breakdown\n5. Local tips and cultural insights\n\nFormat your response as a detailed, actionable travel plan.`,\n    inputVariables: [\n        'duration', 'destination', 'budget', 'travelStyle', \n        'interests', 'groupSize', 'specialRequirements'\n    ],\n});\n\nconst formattedPrompt = await travelPrompt.format({\n    duration: '5-day',\n    destination: 'Tokyo, Japan',\n    budget: '$2000 per person',\n    travelStyle: 'Cultural Explorer',\n    interests: 'Food, Temples, Technology',\n    groupSize: '2 adults',\n    specialRequirements: 'Vegetarian meals preferred'\n});",
+      "demoFunction": "travelPromptBasicDemo",
+      "demoFile": "src/demos/travel-planner/travel-prompt-basic.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Create comprehensive travel planning prompts with multiple variables",
+          "Handle complex user preferences and requirements",
+          "Generate structured travel itinerary requests",
+          "Support various travel styles and group configurations",
+          "Provide consistent format for AI travel interactions"
+        ],
+        "bestUseCases": [
+          "AI-powered travel planning applications",
+          "Personalized itinerary generation systems",
+          "Travel recommendation engines",
+          "Custom travel assistant chatbots",
+          "Workshop prompt engineering demonstrations"
+        ],
+        "limitations": [
+          "Output quality depends on the underlying language model",
+          "Requires careful prompt engineering for optimal results",
+          "May need additional validation for travel data accuracy",
+          "Complex prompts can be harder to debug and maintain"
+        ],
+        "keyTakeaways": [
+          "Foundation for all travel AI applications",
+          "Demonstrates advanced prompt template techniques",
+          "Shows how to handle multiple complex variables",
+          "Perfect starting point for travel assistant development",
+          "Essential skill for AI application builders"
+        ]
+      }
+    },
+    {
+      "id": "travel-chain-basic",
+      "title": "Simple Trip Suggestion Pipeline",
+      "description": "Build a basic chain that processes travel requests and generates suggestions",
+      "category": "workshop",
+      "codeSnippet": "import { PromptTemplate } from '@langchain/core/prompts';\nimport { RunnableSequence } from '@langchain/core/runnables';\nimport { StringOutputParser } from '@langchain/core/output_parsers';\nimport { OpenAI } from '@langchain/openai';\n\n// Step 1: Destination Analysis\nconst destinationAnalysisPrompt = new PromptTemplate({\n    template: `Analyze the travel destination: {destination}\nBudget: {budget}\nTravel Style: {travelStyle}\n\nProvide:\n1. Best time to visit\n2. Budget feasibility analysis\n3. Top 3 must-see attractions\n4. Local transportation options\n\nKeep response concise and factual.`,\n    inputVariables: ['destination', 'budget', 'travelStyle']\n});\n\n// Step 2: Itinerary Generation\nconst itineraryPrompt = new PromptTemplate({\n    template: `Based on this destination analysis:\n{analysis}\n\nCreate a {duration} itinerary for {destination}.\nInterests: {interests}\nGroup: {groupSize}\n\nProvide day-by-day activities with timing and costs.`,\n    inputVariables: ['analysis', 'duration', 'destination', 'interests', 'groupSize']\n});\n\n// Create the chain\nconst travelPlanningChain = RunnableSequence.from([\n    // Step 1: Analyze destination\n    {\n        analysis: destinationAnalysisPrompt.pipe(model).pipe(new StringOutputParser()),\n        destination: (input) => input.destination,\n        duration: (input) => input.duration,\n        interests: (input) => input.interests,\n        groupSize: (input) => input.groupSize\n    },\n    // Step 2: Generate itinerary\n    itineraryPrompt.pipe(model).pipe(new StringOutputParser())\n]);",
+      "demoFunction": "travelChainBasicDemo",
+      "demoFile": "src/demos/travel-planner/travel-chain-basic.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Process travel requests through multiple analysis steps",
+          "Combine destination analysis with itinerary generation",
+          "Handle complex data flow between chain components",
+          "Generate comprehensive travel plans automatically",
+          "Create reusable travel planning workflows"
+        ],
+        "bestUseCases": [
+          "Automated travel planning systems",
+          "Multi-step travel recommendation engines",
+          "Travel agency automation tools",
+          "Personalized trip planning applications",
+          "Educational chain building demonstrations"
+        ],
+        "limitations": [
+          "Requires careful chain design for optimal results",
+          "More complex debugging than single prompts",
+          "Higher API costs due to multiple LLM calls",
+          "Potential for error propagation between steps"
+        ],
+        "keyTakeaways": [
+          "Chains enable sophisticated multi-step workflows",
+          "Essential for building complex travel applications",
+          "Demonstrates data flow management in LangChain",
+          "Foundation for advanced travel planning systems",
+          "Shows practical application of chain composition"
+        ]
+      }
+    },
+    {
+      "id": "travel-chain-structured",
+      "title": "Structured Travel Chain",
+      "description": "Build travel chains with structured JSON output for production applications",
+      "category": "workshop",
+      "codeSnippet": "import { PromptTemplate } from '@langchain/core/prompts';\nimport { RunnableSequence } from '@langchain/core/runnables';\nimport { JsonOutputParser } from '@langchain/core/output_parsers';\nimport { z } from 'zod';\n\n// Define structured output schema\nconst itinerarySchema = z.object({\n  destination: z.string(),\n  duration: z.string(),\n  totalBudget: z.string(),\n  dailyItinerary: z.array(z.object({\n    day: z.number(),\n    theme: z.string(),\n    activities: z.array(z.object({\n      time: z.string(),\n      activity: z.string(),\n      location: z.string(),\n      cost: z.string(),\n      duration: z.string()\n    })),\n    meals: z.object({\n      breakfast: z.string(),\n      lunch: z.string(),\n      dinner: z.string()\n    }),\n    dailyBudget: z.string(),\n    tips: z.array(z.string())\n  })),\n  packingList: z.array(z.string()),\n  culturalTips: z.array(z.string())\n});\n\n// Create structured prompts\nconst structuredPrompt = new PromptTemplate({\n  template: `Create a detailed travel itinerary in JSON format:\n{format_instructions}\n\nDestination: {destination}\nDuration: {duration}\nBudget: {budget}`,\n  inputVariables: ['destination', 'duration', 'budget']\n});\n\n// Build structured chain\nconst structuredChain = RunnableSequence.from([\n  structuredPrompt,\n  model,\n  new JsonOutputParser()\n]);",
+      "demoFunction": "travelChainStructuredDemo",
+      "demoFile": "src/demos/travel-planner/travel-chain-structured.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Generate structured JSON output from AI models",
+          "Define and validate complex data schemas with Zod",
+          "Create type-safe travel planning responses",
+          "Build production-ready chains with consistent output formats",
+          "Handle structured data parsing and validation"
+        ],
+        "bestUseCases": [
+          "Production travel applications requiring consistent data",
+          "Frontend integration with predictable API responses",
+          "Database storage with standardized schemas",
+          "Automated travel planning workflows",
+          "Type-safe application development"
+        ],
+        "limitations": [
+          "Requires careful schema design and maintenance",
+          "JSON parsing can fail with malformed AI responses",
+          "More complex prompt engineering needed",
+          "Higher token usage due to detailed format instructions",
+          "Schema changes require coordinated updates"
+        ],
+        "keyTakeaways": [
+          "Structured output is essential for production AI applications",
+          "Schema validation prevents runtime errors",
+          "JSON format enables seamless frontend integration",
+          "Type safety improves development experience",
+          "Critical skill for building reliable AI systems"
+        ]
+      }
+    },
+    {
+      "id": "travel-knowledge-base",
+      "title": "Travel Knowledge Base (RAG)",
+      "description": "Build a knowledge-powered travel assistant using Retrieval-Augmented Generation",
+      "category": "workshop",
+      "codeSnippet": "import { MemoryVectorStore } from 'langchain/vectorstores/memory';\nimport { OpenAIEmbeddings } from '@langchain/openai';\nimport { Document } from '@langchain/core/documents';\n\n// Create travel knowledge documents\nconst travelKnowledge = [\n  new Document({\n    pageContent: `Tokyo, Japan is a vibrant metropolis blending traditional culture with cutting-edge technology. Best time to visit is March-May (spring) and September-November (autumn). Must-see attractions include Senso-ji Temple, Tokyo Skytree, Shibuya Crossing...`,\n    metadata: { destination: 'Tokyo', country: 'Japan', category: 'overview' }\n  }),\n  // ... more destinations\n];\n\n// Initialize embeddings and vector store\nconst embeddings = new OpenAIEmbeddings({\n  apiKey: process.env.OPENAI_API_KEY,\n  modelName: 'text-embedding-ada-002',\n});\n\nconst vectorStore = await MemoryVectorStore.fromDocuments(\n  travelKnowledge,\n  embeddings\n);\n\nconst retriever = vectorStore.asRetriever({ k: 3 });\n\n// Create RAG chain\nconst ragChain = RunnableSequence.from([\n  {\n    context: async (input) => {\n      const docs = await retriever.getRelevantDocuments(input.question);\n      return docs.map(doc => doc.pageContent).join('\\n\\n');\n    },\n    question: (input) => input.question\n  },\n  ragPrompt,\n  model,\n  new StringOutputParser()\n]);",
+      "demoFunction": "travelKnowledgeBaseDemo",
+      "demoFile": "src/demos/travel-planner/travel-knowledge-base.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Store and retrieve travel knowledge from multiple destinations",
+          "Perform semantic search across travel documents",
+          "Generate context-aware travel recommendations",
+          "Combine external knowledge with AI language models",
+          "Build domain-specific knowledge bases for travel planning"
+        ],
+        "bestUseCases": [
+          "Knowledge-powered travel recommendation systems",
+          "Travel chatbots with factual destination information",
+          "Personalized itinerary generation with local insights",
+          "Travel agency knowledge management systems",
+          "Educational RAG implementation demonstrations"
+        ],
+        "limitations": [
+          "Requires vector database setup and maintenance",
+          "Knowledge base needs regular updates for accuracy",
+          "Embedding costs can scale with document volume",
+          "Retrieval quality depends on document chunking strategy",
+          "May retrieve irrelevant context for ambiguous queries"
+        ],
+        "keyTakeaways": [
+          "RAG enables AI to access external knowledge sources",
+          "Vector embeddings enable semantic document search",
+          "Context retrieval significantly improves AI accuracy",
+          "Knowledge bases require careful curation and organization",
+          "Essential pattern for building knowledge-aware AI applications"
+        ]
+      }
+    },
+    {
+      "id": "travel-agent-tools",
+      "title": "Travel Agent with Tools",
+      "description": "Build an intelligent travel agent that uses external tools for decision-making",
+      "category": "workshop",
+      "codeSnippet": "import { ChatOpenAI } from '@langchain/openai';\nimport { AgentExecutor, createReactAgent } from 'langchain/agents';\nimport { Tool } from '@langchain/core/tools';\n\n// Custom Travel Tools\nclass WeatherTool extends Tool {\n  name = 'weather_checker';\n  description = 'Get current weather conditions and forecast for a travel destination';\n\n  async _call(destination) {\n    // Simulate weather API call\n    return `Weather in ${destination}: 22°C, Partly Cloudy, Perfect for sightseeing!`;\n  }\n}\n\nclass CurrencyTool extends Tool {\n  name = 'currency_converter';\n  description = 'Convert currency for travel budgeting';\n\n  async _call(query) {\n    // Simulate currency conversion\n    return `💱 1000 USD = 150,250 JPY (Rate: 150.25)`;\n  }\n}\n\n// Initialize tools and agent\nconst tools = [new WeatherTool(), new CurrencyTool()];\nconst model = new ChatOpenAI({ temperature: 0.7 });\n\nconst agent = await createReactAgent({\n  llm: model,\n  tools,\n  prompt: agentPrompt\n});\n\nconst agentExecutor = new AgentExecutor({\n  agent,\n  tools,\n  verbose: true,\n  maxIterations: 5\n});\n\n// Execute travel planning query\nconst result = await agentExecutor.invoke({\n  input: 'Plan a trip to Tokyo, check weather and convert 2000 USD to JPY'\n});",
+      "demoFunction": "travelAgentToolsDemo",
+      "demoFile": "src/demos/travel-planner/travel-agent-tools.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Create intelligent agents that use external tools",
+          "Implement ReAct (Reasoning + Acting) pattern for decision-making",
+          "Orchestrate multiple tools for complex travel planning tasks",
+          "Simulate real-world API integrations (weather, currency, booking)",
+          "Build multi-step reasoning workflows with tool selection"
+        ],
+        "bestUseCases": [
+          "Intelligent travel planning assistants",
+          "Multi-service travel booking platforms",
+          "Automated travel research and comparison tools",
+          "Personal travel concierge applications",
+          "Educational agent development workshops"
+        ],
+        "limitations": [
+          "Requires careful tool design and error handling",
+          "Agent reasoning quality depends on LLM capabilities",
+          "Tool execution can be slower than direct API calls",
+          "Complex agent behaviors can be difficult to debug",
+          "Real API integrations require proper authentication and rate limiting"
+        ],
+        "keyTakeaways": [
+          "Agents enable AI to interact with external systems",
+          "Tool-based architecture provides extensible functionality",
+          "ReAct pattern combines reasoning with action execution",
+          "Essential for building practical AI applications",
+          "Foundation for autonomous AI system development"
+        ]
+      }
+    },
+    {
+      "id": "travel-memory-sessions",
+      "title": "Memory Management & User Sessions",
+      "description": "Build personalized AI with memory that remembers user preferences and conversation history",
+      "category": "workshop",
+      "codeSnippet": "import { BufferMemory, ConversationSummaryMemory } from 'langchain/memory';\nimport { ConversationChain } from 'langchain/chains';\n\n// Custom Travel Memory Manager\nclass TravelMemoryManager {\n  constructor() {\n    this.userSessions = new Map();\n    this.userProfiles = new Map();\n    this.conversationHistory = new Map();\n  }\n\n  getOrCreateSession(userId) {\n    if (!this.userSessions.has(userId)) {\n      this.userSessions.set(userId, {\n        id: userId,\n        createdAt: new Date(),\n        preferences: {},\n        memory: new BufferMemory({\n          memoryKey: 'chat_history',\n          returnMessages: true\n        })\n      });\n    }\n    return this.userSessions.get(userId);\n  }\n\n  updateUserProfile(userId, profileData) {\n    const profile = { ...this.userProfiles.get(userId), ...profileData };\n    this.userProfiles.set(userId, profile);\n    return profile;\n  }\n}\n\n// Memory-enhanced conversation chain\nconst memoryManager = new TravelMemoryManager();\nconst session = memoryManager.getOrCreateSession('user_001');\n\nconst chain = new ConversationChain({\n  llm: model,\n  memory: session.memory,\n  prompt: personalizedPrompt\n});\n\nconst response = await chain.call({\n  input: 'Plan a trip based on my previous preferences'\n});",
+      "demoFunction": "travelMemorySessionsDemo",
+      "demoFile": "src/demos/travel-planner/travel-memory-sessions.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Manage user sessions and maintain conversation context",
+          "Learn and store user travel preferences automatically",
+          "Provide personalized recommendations based on history",
+          "Handle multiple concurrent user sessions",
+          "Implement different memory types (Buffer, Summary, Entity)"
+        ],
+        "bestUseCases": [
+          "Personalized travel planning applications",
+          "Multi-user travel platforms with user accounts",
+          "Conversational travel assistants with context retention",
+          "Travel recommendation systems with learning capabilities",
+          "Customer service applications with conversation history"
+        ],
+        "limitations": [
+          "Memory storage can grow large with extensive conversations",
+          "Requires careful privacy and data retention management",
+          "Memory persistence needs database integration for production",
+          "Preference extraction accuracy depends on conversation quality",
+          "Session management complexity increases with scale"
+        ],
+        "keyTakeaways": [
+          "Memory enables personalized and context-aware AI interactions",
+          "User session management is crucial for multi-user applications",
+          "Automatic preference learning improves user experience over time",
+          "Different memory types serve different use cases and constraints",
+          "Essential component for building production-ready conversational AI"
+        ]
+      }
+    },
+    {
+      "id": "smart-travel-planner-complete",
+      "title": "🌟 Complete Smart Travel Planner",
+      "description": "Capstone demo integrating ALL workshop components: Prompts + Chains + Structured Output + RAG + Agents + Memory",
+      "category": "workshop",
+      "codeSnippet": "// COMPLETE SMART TRAVEL PLANNER INTEGRATION\n// Combines all workshop components into one comprehensive system\n\nclass SmartTravelPlanner {\n  constructor() {\n    this.userSessions = new Map();\n    this.knowledgeBase = null;\n    this.tools = [];\n    this.model = null;\n  }\n\n  async initialize() {\n    // Initialize AI model, knowledge base, and tools\n    await this.initializeKnowledgeBase();\n    this.initializeTools();\n  }\n\n  async planTravel(userId, request) {\n    // Step 1: Get or create user session (Memory)\n    const session = this.getOrCreateUserSession(userId);\n    \n    // Step 2: Extract preferences (Prompt Templates)\n    const preferences = this.extractPreferences(request);\n    \n    // Step 3: Retrieve knowledge (RAG)\n    const knowledge = await this.retrieveKnowledge(request);\n    \n    // Step 4: Execute tools (Agents)\n    const weatherInfo = await this.tools[0]._call(destination);\n    \n    // Step 5: Generate structured itinerary (Chains + Structured Output)\n    const itinerary = await this.generateStructuredItinerary(\n      destination, duration, budget, interests, groupSize\n    );\n    \n    // Step 6: Create comprehensive response\n    return {\n      userProfile: session.profile,\n      travelPlan: { destination, duration, budget },\n      knowledge,\n      currentConditions: { weather: weatherInfo },\n      structuredItinerary: itinerary,\n      recommendations: this.generatePersonalizedRecommendations()\n    };\n  }\n}\n\n// Demo: Complete workflow with 3 scenarios\nconst planner = new SmartTravelPlanner();\nawait planner.initialize();\n\n// Scenario 1: Adventure trip to Costa Rica\nconst plan1 = await planner.planTravel('user_alice', \n  'I want a 5-day adventure trip to Costa Rica with $2000 budget');\n\n// Scenario 2: Luxury Paris getaway\nconst plan2 = await planner.planTravel('user_bob',\n  'Plan a luxury romantic getaway to Paris for 3 days');\n\n// Scenario 3: Returning user with memory\nconst plan3 = await planner.planTravel('user_alice',\n  'What other adventure destinations would you recommend?');",
+      "demoFunction": "smartTravelPlannerCompleteDemo",
+      "demoFile": "src/demos/travel-planner/smart-travel-planner-complete.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Integrate all LangChain components into one comprehensive system",
+          "Manage complete user journey from first interaction to booking",
+          "Combine prompt templates, chains, structured output, RAG, agents, and memory",
+          "Handle multiple user sessions with personalized experiences",
+          "Demonstrate production-ready AI application architecture",
+          "Execute multi-step workflows with data flow between components",
+          "Generate structured JSON outputs for frontend integration",
+          "Provide real-time travel information through agent tools"
+        ],
+        "bestUseCases": [
+          "Complete AI travel planning applications",
+          "Enterprise-grade conversational AI systems",
+          "Multi-user platforms with personalization",
+          "Production AI applications requiring all LangChain features",
+          "Educational demonstrations of AI application architecture",
+          "Proof-of-concept for comprehensive AI travel assistants",
+          "Workshop capstone projects integrating multiple AI concepts"
+        ],
+        "limitations": [
+          "Complexity increases maintenance overhead",
+          "Requires careful orchestration of multiple components",
+          "Memory and performance considerations with all features active",
+          "Error handling complexity across integrated systems",
+          "Production deployment requires infrastructure for all components",
+          "API costs increase with multiple AI service calls",
+          "Testing complexity with integrated system dependencies"
+        ],
+        "keyTakeaways": [
+          "Integration of all LangChain components creates powerful AI applications",
+          "Component orchestration is crucial for complex AI system success",
+          "User session management enables personalized AI experiences",
+          "Structured workflows provide predictable and reliable AI outputs",
+          "Production-ready AI requires careful architecture and error handling",
+          "Complete AI systems demonstrate the full potential of LangChain",
+          "Essential capstone for understanding comprehensive AI application development"
         ]
       }
     }

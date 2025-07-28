@@ -10,11 +10,21 @@ interface TopicListProps {
 }
 
 const TopicList: React.FC<TopicListProps> = ({ topics, healthStatus, onTopicClick }) => {
+  const categories = [
+    { name: 'prompts', title: 'Prompt Templates', icon: '📝', description: 'Learn to craft effective prompts for AI models' },
+    { name: 'chains', title: 'Chains', icon: '🔗', description: 'Build complex workflows by chaining operations' },
+    { name: 'memory', title: 'Memory', icon: '🧠', description: 'Add conversation memory to your AI applications' },
+    { name: 'agents', title: 'Agents', icon: '🤖', description: 'Create intelligent agents that can use tools' },
+    { name: 'rag', title: 'RAG', icon: '📚', description: 'Retrieval-Augmented Generation for knowledge-based AI' },
+    { name: 'workshop', title: 'Smart Travel Planner Workshop', icon: '🌍', description: 'Hands-on workshop: Build an AI-powered travel planning application' },
+  ];
+
   const promptTopics = topics.filter(t => t.category === 'prompts');
   const chainTopics = topics.filter(t => t.category === 'chains');
   const memoryTopics = topics.filter(t => t.category === 'memory');
   const agentTopics = topics.filter(t => t.category === 'agents');
   const ragTopics = topics.filter(t => t.category === 'rag');
+  const workshopTopics = topics.filter(t => t.category === 'workshop');
 
   return (
     <div className="documentation-container">
@@ -109,6 +119,13 @@ const TopicList: React.FC<TopicListProps> = ({ topics, healthStatus, onTopicClic
                   topics={ragTopics}
                   onTopicClick={onTopicClick}
                 />
+
+                <TopicSection
+                  title="Smart Travel Planner Workshop"
+                  icon="🌍"
+                  topics={workshopTopics}
+                  onTopicClick={onTopicClick}
+                />
               </div>
             </div>
           </section>
@@ -127,7 +144,7 @@ const TopicList: React.FC<TopicListProps> = ({ topics, healthStatus, onTopicClic
                 </div>
                 <div className="info-card">
                   <div className="info-label">Categories</div>
-                  <div className="info-value">5</div>
+                  <div className="info-value">6</div>
                 </div>
                 <div className="info-card">
                   <div className="info-label">Framework</div>
@@ -144,6 +161,58 @@ const TopicList: React.FC<TopicListProps> = ({ topics, healthStatus, onTopicClic
               </div>
             </div>
           </section>
+
+          {/* Workshop Info Section */}
+          {workshopTopics.length > 0 && (
+            <section className="doc-section">
+              <h2 className="section-title">
+                <span className="section-icon">🎓</span>
+                Workshop: Designing with AI
+              </h2>
+              <div className="section-content">
+                <div className="workshop-info">
+                  <h3>Smart Travel Planner Workshop</h3>
+                  <p className="workshop-description">
+                    Learn to build intelligent travel planning applications using LangChain concepts. 
+                    This hands-on workshop teaches you when to use AI vs traditional programming, 
+                    and how to implement sophisticated travel planning workflows.
+                  </p>
+                  
+                  <div className="workshop-objectives">
+                    <h4>Workshop Objectives:</h4>
+                    <ul>
+                      <li>Understand when to use AI vs traditional programming</li>
+                      <li>Master prompt engineering for travel planning</li>
+                      <li>Build chains for complex travel workflows</li>
+                      <li>Create intelligent travel agents with tools</li>
+                      <li>Implement memory for personalized experiences</li>
+                    </ul>
+                  </div>
+
+                  <div className="workshop-path">
+                    <h4>Learning Path:</h4>
+                    <div className="workshop-steps">
+                      <div className="workshop-step">
+                        <span className="step-number">1</span>
+                        <span className="step-title">Travel Prompt Templates</span>
+                        <span className="step-description">Build complex prompts with multiple variables</span>
+                      </div>
+                      <div className="workshop-step">
+                        <span className="step-number">2</span>
+                        <span className="step-title">Trip Suggestion Pipelines</span>
+                        <span className="step-description">Create multi-step travel planning chains</span>
+                      </div>
+                      <div className="workshop-step">
+                        <span className="step-number">3</span>
+                        <span className="step-title">Coming Soon</span>
+                        <span className="step-description">Travel agents, memory, and RAG integration</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>
