@@ -457,6 +457,82 @@
           "Combines simplicity with powerful conditional logic"
         ]
       }
+    },
+    {
+      "id": "basic-structured-output",
+      "title": "Basic Structured Output",
+      "description": "Generate validated JSON output using Zod schemas for consistent data structures",
+      "category": "chains",
+      "codeSnippet": "import { ChatOpenAI } from '@langchain/openai';\nimport { ChatPromptTemplate } from '@langchain/core/prompts';\nimport { JsonOutputParser } from '@langchain/core/output_parsers';\nimport { RunnableSequence } from '@langchain/core/runnables';\nimport { z } from 'zod';\n\n// Define Zod schema for structured output\nconst PersonSchema = z.object({\n  name: z.string().describe(\"Full name of the person\"),\n  age: z.number().min(0).max(150).describe(\"Age in years\"),\n  occupation: z.string().describe(\"Current job or profession\"),\n  location: z.string().describe(\"City and country where they live\"),\n  skills: z.array(z.string()).describe(\"List of 3-5 key professional skills\"),\n  interests: z.array(z.string()).describe(\"List of 3-5 personal interests\"),\n  personality_traits: z.array(z.string()).describe(\"List of 3-5 personality traits\"),\n  email: z.string().email().describe(\"Professional email address\"),\n  phone: z.string().describe(\"Phone number in format +1-XXX-XXX-XXXX\")\n});\n\n// Initialize components\nconst llm = new ChatOpenAI({\n  apiKey: process.env.OPENAI_API_KEY,\n  modelName: 'gpt-3.5-turbo',\n  temperature: 0.3, // Lower temperature for consistent output\n  maxTokens: 1000,\n});\n\n// Create prompt template with explicit JSON instructions\nconst personPrompt = ChatPromptTemplate.fromTemplate(`\nGenerate a detailed person profile based on the given description.\n\nDescription: {description}\n\nIMPORTANT: You must respond with valid JSON only.\nPlease provide the information in the following JSON format:\n{format_instructions}\n\nMake sure ALL fields are filled with realistic information.\n`);\n\n// Create parser with schema validation\nconst personParser = new JsonOutputParser(PersonSchema);\n\n// Build the structured output chain\nconst personChain = RunnableSequence.from([\n  {\n    description: (input) => input.description,\n    format_instructions: () => personParser.getFormatInstructions(),\n  },\n  personPrompt,\n  llm,\n  personParser,\n]);\n\n// Execute the chain\nconst result = await personChain.invoke({\n  description: \"A 28-year-old software engineer from San Francisco\"\n});\n\nconsole.log('Generated Person Profile:', result);",
+      "demoFunction": "basicStructuredOutputDemo",
+      "demoFile": "src/demos/chains/basic-structured-output.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Generate JSON output with predefined Zod schemas",
+          "Validate and parse LLM responses automatically",
+          "Ensure type-safe, consistent data structures",
+          "Handle person profiles and company analysis",
+          "Provide runtime validation and error handling"
+        ],
+        "bestUseCases": [
+          "API responses requiring consistent JSON structure",
+          "Data extraction from unstructured text",
+          "User profile and business data generation",
+          "Form generation and validation systems",
+          "Structured content creation workflows"
+        ],
+        "limitations": [
+          "Requires careful prompt engineering for consistent output",
+          "JSON parsing can fail with complex or ambiguous requests",
+          "Schema validation adds computational overhead",
+          "Works best with flatter, simpler schema structures"
+        ],
+        "keyTakeaways": [
+          "Essential for building reliable AI applications with predictable output",
+          "Zod schemas provide both validation and TypeScript types",
+          "Lower temperature settings improve JSON consistency",
+          "Design schemas that match LLM natural output patterns",
+          "Foundation for building production-ready AI APIs"
+        ]
+      }
+    },
+    {
+      "id": "multi-step-structured-pipeline",
+      "title": "Multi-Step Structured Pipeline",
+      "description": "Chain multiple structured outputs where each step builds upon the previous",
+      "category": "chains",
+      "codeSnippet": "import { ChatOpenAI } from '@langchain/openai';\nimport { ChatPromptTemplate } from '@langchain/core/prompts';\nimport { JsonOutputParser } from '@langchain/core/output_parsers';\nimport { RunnableSequence } from '@langchain/core/runnables';\nimport { z } from 'zod';\n\n// Step 1 Schema: Product Idea Generation\nconst ProductIdeaSchema = z.object({\n  product_name: z.string().describe(\"Name of the product\"),\n  category: z.string().describe(\"Product category\"),\n  target_audience: z.string().describe(\"Primary target audience\"),\n  key_features: z.array(z.string()).describe(\"List of key features\"),\n  unique_value_proposition: z.string().describe(\"What makes it unique\"),\n  estimated_price_range: z.string().describe(\"Expected price range\")\n});\n\n// Step 2 Schema: Market Analysis\nconst MarketAnalysisSchema = z.object({\n  market_size: z.string().describe(\"Total addressable market\"),\n  growth_rate: z.string().describe(\"Annual market growth rate\"),\n  competition_level: z.enum(['Low', 'Medium', 'High']),\n  key_competitors: z.array(z.string()).describe(\"Main competitors\"),\n  success_probability: z.enum(['Low', 'Medium', 'High']),\n  recommended_strategy: z.string().describe(\"Go-to-market strategy\")\n});\n\n// Initialize LLM\nconst llm = new ChatOpenAI({\n  modelName: 'gpt-3.5-turbo',\n  temperature: 0.4\n});\n\n// Step 1: Product Idea Chain\nconst productIdeaChain = RunnableSequence.from([\n  productIdeaPrompt,\n  llm,\n  new JsonOutputParser(ProductIdeaSchema)\n]);\n\n// Step 2: Market Analysis Chain (uses Step 1 output)\nconst marketAnalysisChain = RunnableSequence.from([\n  marketAnalysisPrompt,\n  llm,\n  new JsonOutputParser(MarketAnalysisSchema)\n]);\n\n// Execute pipeline\nconst productIdea = await productIdeaChain.invoke({\n  industry: \"Health & Wellness\",\n  problem: \"People struggle with home exercise routines\"\n});\n\nconst marketAnalysis = await marketAnalysisChain.invoke(productIdea);\n\nconsole.log('Pipeline Results:', { productIdea, marketAnalysis });",
+      "demoFunction": "multiStepStructuredPipelineDemo",
+      "demoFile": "src/demos/chains/multi-step-structured-pipeline.js",
+      "capabilities": {
+        "whatItCanDo": [
+          "Chain multiple structured outputs together",
+          "Pass data between pipeline steps automatically",
+          "Build complex workflows with validated data flow",
+          "Handle multi-stage analysis and processing",
+          "Create sequential AI processing pipelines"
+        ],
+        "bestUseCases": [
+          "Product development and market analysis workflows",
+          "Multi-stage content creation pipelines",
+          "Business analysis and planning processes",
+          "Research and recommendation systems",
+          "Complex decision-making workflows"
+        ],
+        "limitations": [
+          "Each step depends on the success of previous steps",
+          "Longer execution time due to multiple AI calls",
+          "Error in any step can break the entire pipeline",
+          "Requires careful data flow management between steps"
+        ],
+        "keyTakeaways": [
+          "Perfect for complex workflows requiring multiple AI processing stages",
+          "Each step should have focused, well-defined responsibilities",
+          "Design schemas that work well together across steps",
+          "Essential for building sophisticated AI-powered business processes",
+          "Mirrors human decision-making with structured intermediate steps"
+        ]
+      }
     }
   ],
   "memory": [
@@ -1001,7 +1077,7 @@
       "title": "Basic RAG Chain",
       "description": "Build a simple retrieval-augmented generation system",
       "category": "rag",
-      "codeSnippet": "import { ChatOpenAI } from '@langchain/openai';\nimport { RetrievalQAChain } from 'langchain/chains';\nimport { PromptTemplate } from '@langchain/core/prompts';\n\n// Initialize components\nconst llm = new ChatOpenAI({\n  temperature: 0,\n  modelName: 'gpt-3.5-turbo',\n});\n\n// Create retriever from vector store\nconst retriever = vectorStore.asRetriever({\n  searchType: 'similarity',\n  searchKwargs: { k: 4 },\n});\n\n// Custom prompt template for RAG\nconst ragPrompt = PromptTemplate.fromTemplate(\n  `Use the following pieces of context to answer the question at the end.\n  If you don't know the answer, just say that you don't know, don't try to make up an answer.\n\n  Context:\n  {context}\n\n  Question: {question}\n\n  Answer:`\n);\n\n// Create RAG chain\nconst ragChain = RetrievalQAChain.fromLLM(llm, retriever, {\n  prompt: ragPrompt,\n  returnSourceDocuments: true,\n});\n\n// Query the RAG system\nconst question = 'What are the main benefits of using vector databases?';\nconst response = await ragChain.call({\n  query: question,\n});\n\nconsole.log('Question:', question);\nconsole.log('Answer:', response.text);\nconsole.log('\nSource Documents:');\nresponse.sourceDocuments.forEach((doc, index) => {\n  console.log(`${index + 1}. Source: ${doc.metadata.source}`);\n  console.log(`   Content: ${doc.pageContent.substring(0, 150)}...`);\n});",
+      "codeSnippet": "import { ChatOpenAI, OpenAIEmbeddings } from '@langchain/openai';\nimport { MemoryVectorStore } from 'langchain/vectorstores/memory';\nimport { Document } from '@langchain/core/documents';\nimport { ChatPromptTemplate } from '@langchain/core/prompts';\nimport { StringOutputParser } from '@langchain/core/output_parsers';\nimport { RunnableSequence, RunnablePassthrough } from '@langchain/core/runnables';\nimport { formatDocumentsAsString } from 'langchain/util/document';\nimport { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';\n\n// Initialize components\nconst llm = new ChatOpenAI({\n  apiKey: process.env.OPENAI_API_KEY,\n  modelName: 'gpt-3.5-turbo',\n  temperature: 0.7,\n  maxTokens: 500,\n});\n\nconst embeddings = new OpenAIEmbeddings({\n  apiKey: process.env.OPENAI_API_KEY,\n  modelName: 'text-embedding-ada-002',\n});\n\n// Create knowledge base and split into chunks\nconst textSplitter = new RecursiveCharacterTextSplitter({\n  chunkSize: 1000,\n  chunkOverlap: 200,\n  separators: ['\\n## ', '\\n### ', '\\n\\n', '\\n', ' ', ''],\n});\n\nconst docs = await textSplitter.createDocuments([knowledgeBase], [{\n  source: 'langchain_documentation',\n  type: 'documentation'\n}]);\n\n// Create vector store from documents\nconst vectorStore = await MemoryVectorStore.fromDocuments(docs, embeddings);\n\n// Create retriever\nconst retriever = vectorStore.asRetriever({\n  k: 4, // Retrieve top 4 most similar documents\n  searchType: 'similarity',\n});\n\n// Create RAG prompt template\nconst ragPromptTemplate = ChatPromptTemplate.fromTemplate(`\nYou are a helpful assistant that answers questions based on the provided context.\n\nContext:\n{context}\n\nQuestion: {question}\n\nInstructions:\n- Answer the question based primarily on the provided context\n- If the context doesn't contain enough information, say so clearly\n- Provide specific details from the context when possible\n- Be concise but comprehensive\n\nAnswer:`);\n\n// Build the RAG chain using LCEL\nconst ragChain = RunnableSequence.from([\n  {\n    context: retriever.pipe(formatDocumentsAsString),\n    question: new RunnablePassthrough(),\n  },\n  ragPromptTemplate,\n  llm,\n  new StringOutputParser(),\n]);\n\n// Test the RAG chain\nconst question = \"What is LangChain and what are its main purposes?\";\nconst response = await ragChain.invoke(question);\n\nconsole.log('Question:', question);\nconsole.log('Answer:', response);",
       "demoFunction": "basicRagChainDemo",
       "demoFile": "src/demos/rag/basic-rag-chain.js",
       "capabilities": {
