@@ -186,18 +186,19 @@ Provide detailed, practical information for each field.`,
     if (process.env.OPENAI_API_KEY) {
       model = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
-        temperature: 0.7,
-        maxTokens: 2000,
+        temperature: 0.3,  // Lower temperature for more consistent JSON
+        maxTokens: 3000,   // Increased tokens for complex structured output
       });
 
-      // Create JSON output parser
-      const jsonParser = new JsonOutputParser();
+      // Create JSON output parsers with schema validation
+      const analysisParser = new JsonOutputParser({ schema: destinationAnalysisSchema });
+      const itineraryParser = new JsonOutputParser({ schema: itinerarySchema });
 
       // Create structured travel planning chain
       structuredChain = RunnableSequence.from([
         // Step 1: Structured destination analysis
         {
-          analysis: structuredAnalysisPrompt.pipe(model).pipe(jsonParser),
+          analysis: structuredAnalysisPrompt.pipe(model).pipe(analysisParser),
           destination: (input) => input.destination,
           duration: (input) => input.duration,
           interests: (input) => input.interests,
@@ -208,7 +209,7 @@ Provide detailed, practical information for each field.`,
           ...input,
           analysis: JSON.stringify(input.analysis, null, 2)
         }),
-        structuredItineraryPrompt.pipe(model).pipe(jsonParser)
+        structuredItineraryPrompt.pipe(model).pipe(itineraryParser)
       ]);
 
       console.log('🤖 AI Model and Structured Chain Initialized');
@@ -345,18 +346,31 @@ Provide detailed, practical information for each field.`,
           const result = await structuredChain.invoke(request);
           
           console.log('✅ Structured Output Generated:');
-          console.log('📊 Type:', typeof result);
-          console.log('🔑 Keys:', Object.keys(result));
-          console.log('📅 Daily Itinerary Days:', result.dailyItinerary?.length || 'N/A');
-          console.log('🎒 Packing Items:', result.packingList?.length || 'N/A');
+          console.log('📊 Type: ' + typeof result);
+          console.log('🔑 Keys: ' + Object.keys(result).join(', '));
+          console.log('📅 Daily Itinerary Days: ' + (result.dailyItinerary?.length || 'N/A'));
+          console.log('🎒 Packing Items: ' + (result.packingList?.length || 'N/A'));
           console.log('');
           console.log('📋 Sample Output (first day):');
           if (result.dailyItinerary && result.dailyItinerary[0]) {
-            console.log(JSON.stringify(result.dailyItinerary[0], null, 2));
+            console.log(JSON.stringify(result, null, 2));
           }
           console.log('');
         } catch (error) {
           console.log(`❌ Error processing structured request: ${error.message}`);
+          
+          if (error.message.includes('JSON') || error.message.includes('parse')) {
+            console.log('💡 JSON Parsing Issue Detected:');
+            console.log('   • AI model generated malformed JSON');
+            console.log('   • Common causes: unescaped quotes, incomplete responses');
+            console.log('   • Solutions: adjust temperature, add JSON format instructions');
+            console.log('');
+            console.log('🔧 Troubleshooting Tips:');
+            console.log('   • Lower temperature (0.3-0.5) for more consistent JSON');
+            console.log('   • Add explicit JSON format examples in prompts');
+            console.log('   • Use shorter, simpler schema structures');
+            console.log('   • Implement retry logic with exponential backoff');
+          }
           console.log('');
         }
       }

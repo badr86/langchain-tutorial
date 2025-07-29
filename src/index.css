@@ -122,6 +122,11 @@ code {
   color: #3f51b5;
 }
 
+.topic-category.workshop {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
 .topic-title {
   font-size: 1.3rem;
   font-weight: 600;

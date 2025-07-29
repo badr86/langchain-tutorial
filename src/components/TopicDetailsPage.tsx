@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import StatusIndicator from './StatusIndicator';
@@ -20,6 +20,11 @@ const TopicDetailsPage: React.FC<TopicDetailsPageProps> = ({
 }) => {
   const [executing, setExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
+
+  // Scroll to top when component mounts or topic changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [topic.id]);
 
   const executeTopic = async () => {
     setExecuting(true);
@@ -116,22 +121,6 @@ const TopicDetailsPage: React.FC<TopicDetailsPageProps> = ({
             </div>
           </section>
 
-          {/* Capabilities Section */}
-          {topic.capabilities && (
-            <section id="capabilities" className="doc-section">
-              <h2 className="section-title">
-                <span className="section-icon">⚡</span>
-                Capabilities
-              </h2>
-              <div className="section-content">
-                <CapabilitiesSection 
-                  capabilities={topic.capabilities} 
-                  title=""
-                />
-              </div>
-            </section>
-          )}
-
           {/* Implementation Section */}
           <section id="implementation" className="doc-section">
             <h2 className="section-title">
@@ -176,6 +165,22 @@ const TopicDetailsPage: React.FC<TopicDetailsPageProps> = ({
               </div>
             </div>
           </section>
+
+          {/* Capabilities Section */}
+          {topic.capabilities && (
+            <section id="capabilities" className="doc-section">
+              <h2 className="section-title">
+                <span className="section-icon">⚡</span>
+                Capabilities
+              </h2>
+              <div className="section-content">
+                <CapabilitiesSection 
+                  capabilities={topic.capabilities} 
+                  title=""
+                />
+              </div>
+            </section>
+          )}
 
           {/* Interactive Demo Section */}
           <section id="demo" className="doc-section">

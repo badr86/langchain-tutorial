@@ -34,8 +34,8 @@ Format your response as a detailed, actionable travel plan.`,
     });
 
     console.log('✅ Travel Prompt Template Created Successfully');
-    console.log('📋 Input Variables:', travelPrompt.inputVariables);
-    console.log('🔢 Total Variables:', travelPrompt.inputVariables.length);
+    console.log('📋 Input Variables: ' + travelPrompt.inputVariables.join(', '));
+    console.log('🔢 Total Variables: ' + travelPrompt.inputVariables.length);
     console.log('');
 
     // Workshop Example 1: Tokyo Cultural Explorer
