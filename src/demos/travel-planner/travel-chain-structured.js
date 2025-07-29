@@ -1,7 +1,7 @@
 import { PromptTemplate } from '@langchain/core/prompts';
 import { RunnableSequence } from '@langchain/core/runnables';
 import { JsonOutputParser } from '@langchain/core/output_parsers';
-import { OpenAI } from '@langchain/openai';
+import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
 
 export async function travelChainStructuredDemo() {
@@ -78,6 +78,10 @@ export async function travelChainStructuredDemo() {
     console.log('   ✅ Type Safety: Zod validation ensures consistent output format');
     console.log('');
 
+    // Create output parsers
+    const analysisParser = new JsonOutputParser({ schema: destinationAnalysisSchema });
+    const itineraryParser = new JsonOutputParser({ schema: itinerarySchema });
+
     // Step 1: Structured Destination Analysis Prompt
     const structuredAnalysisPrompt = new PromptTemplate({
       template: `You are a professional travel analyst. Analyze the destination and provide a comprehensive structured analysis.
@@ -86,40 +90,19 @@ Destination: {destination}
 Budget: {budget}
 Travel Style: {travelStyle}
 
-Provide a detailed analysis in the following JSON structure:
-{{
-  "destination": "destination name",
-  "bestTimeToVisit": {{
-    "months": ["month1", "month2", ...],
-    "season": "best season",
-    "weather": "weather description"
-  }},
-  "budgetAnalysis": {{
-    "feasibility": "Low|Medium|High",
-    "dailyBudget": {{
-      "budget": "daily budget range",
-      "accommodation": "accommodation cost range",
-      "food": "food cost range", 
-      "activities": "activities cost range"
-    }}
-  }},
-  "topAttractions": [
-    {{
-      "name": "attraction name",
-      "type": "attraction type",
-      "estimatedCost": "cost estimate",
-      "timeNeeded": "time needed"
-    }}
-  ],
-  "transportation": {{
-    "primary": "primary transport method",
-    "cost": "transport cost estimate",
-    "tips": ["tip1", "tip2", ...]
-  }}
-}}
+IMPORTANT: You must respond with ONLY valid JSON using EXACTLY these field names:
+- destination: string
+- bestTimeToVisit: object with months (array), season (string), weather (string)
+- budgetAnalysis: object with feasibility ("Low"|"Medium"|"High"), dailyBudget object
+- topAttractions: array of exactly 3 attraction objects
+- transportation: object with primary, cost, tips array
 
-Ensure all fields are filled with accurate, helpful information.`,
-      inputVariables: ['destination', 'budget', 'travelStyle']
+Do not use any other field names. Follow this structure exactly:
+
+{analysis_format_instructions}
+
+Return ONLY the JSON object with these exact field names, nothing else.`,
+      inputVariables: ['destination', 'budget', 'travelStyle', 'analysis_format_instructions']
     });
 
     // Step 2: Structured Itinerary Generation Prompt
@@ -134,44 +117,21 @@ Trip Details:
 - Interests: {interests}
 - Group Size: {groupSize}
 
-Create a comprehensive itinerary in the following JSON structure:
-{{
-  "destination": "destination name",
-  "duration": "trip duration",
-  "totalBudget": "total estimated budget",
-  "dailyItinerary": [
-    {{
-      "day": 1,
-      "theme": "day theme",
-      "activities": [
-        {{
-          "time": "HH:MM",
-          "activity": "activity name",
-          "location": "location",
-          "cost": "cost estimate",
-          "duration": "duration"
-        }}
-      ],
-      "meals": {{
-        "breakfast": "breakfast recommendation",
-        "lunch": "lunch recommendation", 
-        "dinner": "dinner recommendation"
-      }},
-      "dailyBudget": "daily budget breakdown",
-      "tips": ["tip1", "tip2"]
-    }}
-  ],
-  "packingList": ["item1", "item2", ...],
-  "culturalTips": ["tip1", "tip2", ...],
-  "emergencyInfo": {{
-    "embassy": "embassy contact",
-    "emergency": "emergency numbers",
-    "hospitals": ["hospital1", "hospital2"]
-  }}
-}}
+IMPORTANT: You must respond with ONLY valid JSON using EXACTLY these field names:
+- destination: string
+- duration: string
+- totalBudget: string
+- dailyItinerary: array of day objects with day, theme, activities, meals, dailyBudget, tips
+- packingList: array of strings
+- culturalTips: array of strings
+- emergencyInfo: object with embassy, emergency, hospitals
 
-Provide detailed, practical information for each field.`,
-      inputVariables: ['analysis', 'duration', 'destination', 'interests', 'groupSize']
+Do not use any other field names like "itinerary" wrapper. Follow this structure exactly:
+
+{itinerary_format_instructions}
+
+Return ONLY the JSON object with these exact field names, nothing else.`,
+      inputVariables: ['analysis', 'duration', 'destination', 'interests', 'groupSize', 'itinerary_format_instructions']
     });
 
     console.log('✅ Structured Prompts Created:');
@@ -179,38 +139,72 @@ Provide detailed, practical information for each field.`,
     console.log('   📅 Itinerary Prompt: Creates detailed daily breakdown with activities');
     console.log('');
 
-    // Initialize OpenAI model and JSON parser
+    // Initialize OpenAI model
     let model = null;
     let structuredChain = null;
 
     if (process.env.OPENAI_API_KEY) {
-      model = new OpenAI({
+      model = new ChatOpenAI({
         apiKey: process.env.OPENAI_API_KEY,
         temperature: 0.3,  // Lower temperature for more consistent JSON
         maxTokens: 3000,   // Increased tokens for complex structured output
+        modelName: 'gpt-3.5-turbo'
       });
 
-      // Create JSON output parsers with schema validation
-      const analysisParser = new JsonOutputParser({ schema: destinationAnalysisSchema });
-      const itineraryParser = new JsonOutputParser({ schema: itinerarySchema });
-
-      // Create structured travel planning chain
-      structuredChain = RunnableSequence.from([
-        // Step 1: Structured destination analysis
+      // Let's start with JUST the analysis chain to debug step by step
+      const analysisChain = RunnableSequence.from([
         {
-          analysis: structuredAnalysisPrompt.pipe(model).pipe(analysisParser),
+          destination: (input) => input.destination,
+          budget: (input) => input.budget,
+          travelStyle: (input) => input.travelStyle,
+          analysis_format_instructions: () => analysisParser.getFormatInstructions()
+        },
+        structuredAnalysisPrompt,
+        model,
+        analysisParser
+      ]);
+
+      // Create itinerary chain
+      const itineraryChain = RunnableSequence.from([
+        {
           destination: (input) => input.destination,
           duration: (input) => input.duration,
           interests: (input) => input.interests,
-          groupSize: (input) => input.groupSize
+          groupSize: (input) => input.groupSize,
+          analysis: (input) => input.analysis,
+          itinerary_format_instructions: () => itineraryParser.getFormatInstructions()
         },
-        // Step 2: Structured itinerary generation
-        (input) => ({
-          ...input,
-          analysis: JSON.stringify(input.analysis, null, 2)
-        }),
-        structuredItineraryPrompt.pipe(model).pipe(itineraryParser)
+        structuredItineraryPrompt,
+        model,
+        itineraryParser
       ]);
+
+      // Now test both chains together
+      structuredChain = {
+        invoke: async (input) => {
+          console.log('🔍 Debug: Input received:', JSON.stringify(input, null, 2));
+          
+          // Step 1: Run analysis chain
+          console.log('🔄 Running analysis chain...');
+          const analysis = await analysisChain.invoke(input);
+          
+          console.log('✅ Analysis result:', JSON.stringify(analysis, null, 2));
+          
+          // Step 2: Run itinerary chain using analysis
+          console.log('🔄 Running itinerary chain...');
+          const itinerary = await itineraryChain.invoke({
+            destination: input.destination,
+            duration: input.duration,
+            interests: input.interests,
+            groupSize: input.groupSize,
+            analysis: JSON.stringify(analysis, null, 2)
+          });
+          
+          console.log('✅ Itinerary result:', JSON.stringify(itinerary, null, 2));
+          
+          return itinerary;
+        }
+      };
 
       console.log('🤖 AI Model and Structured Chain Initialized');
       console.log('🔗 Chain Components: Analysis → JSON Parse → Itinerary → JSON Parse');
@@ -220,7 +214,7 @@ Provide detailed, practical information for each field.`,
       console.log('💡 Set OPENAI_API_KEY environment variable to run live structured demos.');
       console.log('');
     }
-
+/*
     // Demo 1: Structured Output Examples
     console.log('🏗️ Demo 1: Structured Output Examples');
     console.log('='.repeat(50));
@@ -318,7 +312,7 @@ Provide detailed, practical information for each field.`,
     console.log('📅 Example Structured Itinerary (Day 1 shown):');
     console.log(JSON.stringify(exampleItinerary, null, 2));
     console.log('');
-
+*/
     // Demo 2: Live Structured Chain Execution
     if (structuredChain) {
       console.log('🤖 Demo 2: Live Structured Chain Execution');
