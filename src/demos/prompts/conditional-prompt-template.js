@@ -23,7 +23,7 @@ const createLLM = () => {
  * Different prompt templates are selected based on the target audience or context.
  */
 async function conditionalPromptTemplateDemo() {
-    console.log('🚀 Executing Conditional Prompt Template Demo...');
+    /*console.log('🚀 Executing Conditional Prompt Template Demo...');
     console.log('=' .repeat(60));
 
     // Create conditional prompt factory
@@ -84,7 +84,7 @@ async function conditionalPromptTemplateDemo() {
             console.log('⚠️  OpenAI API Key not found. Showing formatted prompt only.');
         }
     }
-
+*/
     // Advanced conditional logic example
     console.log(`\n${'='.repeat(60)}`);
     console.log('🔧 Advanced Conditional Logic Example');
@@ -129,6 +129,28 @@ async function conditionalPromptTemplateDemo() {
     
     console.log('📋 Advanced Formatted Prompt:');
     console.log(`   ${advancedFormatted}`);
+    
+    // Execute the advanced prompt with LLM if API key is available
+    if (process.env.OPENAI_API_KEY) {
+        console.log('🔄 Getting LLM response for advanced prompt...');
+        try {
+            const llm = new ChatOpenAI({
+                apiKey: process.env.OPENAI_API_KEY,
+                temperature: 0.7,
+                modelName: 'gpt-3.5-turbo',
+            });
+            
+            const chain = advancedPrompt.pipe(llm);
+            const advancedResponse = await chain.invoke({ topic: 'React hooks' });
+            
+            console.log('🤖 Advanced AI Response:');
+            console.log(`   ${advancedResponse.content}`);
+        } catch (error) {
+            console.log('❌ Error getting LLM response:', error.message);
+        }
+    } else {
+        console.log('⚠️  OpenAI API Key not found. Skipping LLM invocation for advanced example.');
+    }
 
     console.log('\n✅ Conditional Prompt Template Demo completed!');
     console.log('💡 Key takeaways:');
