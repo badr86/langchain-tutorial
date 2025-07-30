@@ -1,8 +1,12 @@
+import dotenv from 'dotenv';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { RunnableSequence } from '@langchain/core/runnables';
 import { JsonOutputParser } from '@langchain/core/output_parsers';
 import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
+
+// Load environment variables
+dotenv.config();
 
 export async function travelChainStructuredDemo() {
   console.log('🏗️ Smart Travel Planner: Structured Output Chain');

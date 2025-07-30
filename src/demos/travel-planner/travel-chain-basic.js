@@ -1,7 +1,11 @@
+import dotenv from 'dotenv';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { RunnableSequence } from '@langchain/core/runnables';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { OpenAI } from '@langchain/openai';
+
+// Load environment variables
+dotenv.config();
 
 export async function travelChainBasicDemo() {
   console.log('🔗 Smart Travel Planner: Basic Chain Pipeline');
