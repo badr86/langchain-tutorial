@@ -157,17 +157,24 @@ const executeDemoFile = async (filePath) => {
             });
         });
         
-        // Set a timeout to prevent hanging
-        setTimeout(() => {
-            if (!child.killed) {
-                child.kill();
-                resolve({
-                    success: false,
-                    output: output,
-                    error: 'Demo execution timed out after 30 seconds'
-                });
-            }
-        }, 30000);
+        // Set a timeout to prevent hanging (disabled in debug mode)
+        const isDebugMode = process.env.NODE_ENV === 'development';
+        const timeoutMs = process.env.DEMO_TIMEOUT_MS || 120000; // 2 minutes default
+        
+        if (!isDebugMode) {
+            setTimeout(() => {
+                if (!child.killed) {
+                    child.kill();
+                    resolve({
+                        success: false,
+                        output: output,
+                        error: `Demo execution timed out after ${timeoutMs / 1000} seconds`
+                    });
+                }
+            }, timeoutMs);
+        } else {
+            console.log('🐛 Debug mode: Timeout disabled for demo execution');
+        }
     });
 };
 

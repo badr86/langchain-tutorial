@@ -258,6 +258,7 @@ Thought: {agent_scratchpad}
           tools,
           verbose: true,
           maxIterations: 5,
+          returnIntermediateSteps: true,
         });
 
         // Test agent with travel planning scenarios
@@ -278,6 +279,18 @@ Thought: {agent_scratchpad}
             
             console.log('🤖 Agent Response:');
             console.log(result.output);
+            
+            // Debug: Show intermediate steps if available
+            if (result.intermediateSteps && result.intermediateSteps.length > 0) {
+              console.log('\n🔍 Agent Reasoning Steps:');
+              result.intermediateSteps.forEach((step, index) => {
+                console.log(`   Step ${index + 1}:`);
+                console.log(`   🧠 Action: ${step.action.tool}`);
+                console.log(`   📝 Input: ${step.action.toolInput}`);
+                console.log(`   📊 Result: ${step.observation.substring(0, 100)}...`);
+                console.log('');
+              });
+            }
             console.log('');
           } catch (error) {
             console.log(`❌ Agent error: ${error.message}`);

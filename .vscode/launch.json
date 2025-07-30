@@ -14,7 +14,8 @@
             "program": "${workspaceFolder}\\src\\api-server.js",
             "env": {
                 "NODE_ENV": "development",
-                "PORT": "3030"
+                "PORT": "3030",
+                "DEMO_TIMEOUT_MS": "180000"
             },
             "console": "integratedTerminal",
             "restart": true,
