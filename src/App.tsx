@@ -4,6 +4,8 @@ import { LoadingSpinner } from './components';
 import { Topic, HealthStatus } from './types';
 import HomePage from './pages/HomePage';
 import TopicDetailsPageRoute from './pages/TopicDetailsPageRoute';
+import TravelPlannerPage from './pages/TravelPlannerPage';
+import TravelPlanDetailsPage from './pages/TravelPlanDetailsPage';
 
 const API_BASE = '/api';
 
@@ -69,6 +71,14 @@ function App() {
               healthStatus={healthStatus} 
             />
           } 
+        />
+        <Route 
+          path="/travel-planner" 
+          element={<TravelPlannerPage />} 
+        />
+        <Route 
+          path="/travel-plan" 
+          element={<TravelPlanDetailsPage />} 
         />
       </Routes>
     </div>

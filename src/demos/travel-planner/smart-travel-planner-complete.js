@@ -1,15 +1,17 @@
+import dotenv from 'dotenv';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { RunnableSequence } from '@langchain/core/runnables';
 import { JsonOutputParser, StringOutputParser } from '@langchain/core/output_parsers';
 import { ChatOpenAI } from '@langchain/openai';
-import { BufferMemory } from 'langchain/memory';
-import { ConversationChain } from 'langchain/chains';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
-import { AgentExecutor, createReactAgent } from 'langchain/agents';
 import { Tool } from '@langchain/core/tools';
+import { AgentExecutor, createReactAgent } from 'langchain/agents';
 import { z } from 'zod';
+
+// Load environment variables from .env file
+dotenv.config();
 
 // ===== SMART TRAVEL PLANNER: COMPLETE INTEGRATION =====
 // This demo integrates all workshop components into one comprehensive system
@@ -43,6 +45,12 @@ class SmartTravelPlanner {
     
     // Initialize tools
     this.initializeTools();
+    
+    // Initialize AgentExecutor
+    await this.initializeAgent();
+    
+    // Memory functionality removed for simplification
+    console.log('✅ Memory functionality disabled for simplified implementation');
     
     this.initialized = true;
     console.log('🎯 Smart Travel Planner fully initialized!');
@@ -103,7 +111,9 @@ class SmartTravelPlanner {
           'tokyo': '22°C, Partly Cloudy, Perfect for sightseeing',
           'paris': '18°C, Light Rain, Bring an umbrella',
           'barcelona': '25°C, Sunny, Great beach weather',
-          'costa rica': '28°C, Tropical, Afternoon showers expected'
+          'costa rica': '28°C, Tropical, Afternoon showers expected',
+          'bali': '30°C, Humid, Tropical paradise weather',
+          'new york': '15°C, Clear, Crisp autumn day'
         };
         return weatherData[destination.toLowerCase()] || '20°C, Variable conditions';
       }
@@ -115,7 +125,10 @@ class SmartTravelPlanner {
       description = 'Convert currency for travel budgeting';
 
       async _call(query) {
-        const rates = { 'usd_jpy': 150.25, 'usd_eur': 0.85, 'usd_gbp': 0.73 };
+        const rates = { 
+          'usd_jpy': 150.25, 'usd_eur': 0.85, 'usd_gbp': 0.73,
+          'usd_cad': 1.35, 'usd_aud': 1.52, 'usd_inr': 83.12
+        };
         const match = query.match(/(\d+)\s*(\w+)\s*to\s*(\w+)/i);
         if (!match) return 'Format: "amount FROM_CURRENCY to TO_CURRENCY"';
         
@@ -123,6 +136,115 @@ class SmartTravelPlanner {
         const rate = rates[`${from.toLowerCase()}_${to.toLowerCase()}`] || 1.0;
         const converted = (parseFloat(amount) * rate).toFixed(2);
         return `${amount} ${from.toUpperCase()} = ${converted} ${to.toUpperCase()}`;
+      }
+    }
+
+    // Restaurant Finder Tool (NEW)
+    class RestaurantTool extends Tool {
+      name = 'restaurant_finder';
+      description = 'Find restaurants and dining recommendations for destinations';
+
+      async _call(query) {
+        const restaurants = {
+          'tokyo': [
+            'Sukiyabashi Jiro - World-famous sushi ($200-300)',
+            'Ramen Yashichi - Authentic tonkotsu ramen ($15-20)',
+            'Nabezo - All-you-can-eat shabu-shabu ($30-40)'
+          ],
+          'paris': [
+            'Le Comptoir du Relais - Classic bistro ($40-60)',
+            'L\'As du Fallafel - Best falafel in Marais ($8-12)',
+            'Pierre Hermé - Macarons and pastries ($5-15)'
+          ],
+          'barcelona': [
+            'Cal Pep - Traditional tapas bar ($25-35)',
+            'Disfrutar - Michelin-starred innovation ($150-200)',
+            'La Boqueria Market - Fresh local produce ($10-20)'
+          ]
+        };
+        
+        const destination = query.toLowerCase();
+        const restaurantList = restaurants[destination] || [
+          'Local family restaurant - Traditional cuisine ($20-30)',
+          'Street food market - Authentic local flavors ($5-15)',
+          'Rooftop dining - City views and international menu ($40-60)'
+        ];
+        
+        return `🍽️ Restaurant recommendations for ${query}:\n${restaurantList.map(r => `• ${r}`).join('\n')}`;
+      }
+    }
+
+    // Activity Recommender Tool (NEW)
+    class ActivityTool extends Tool {
+      name = 'activity_recommender';
+      description = 'Recommend activities and attractions based on interests';
+
+      async _call(query) {
+        const [destination, interests] = query.split('|').map(s => s.trim());
+        
+        const activities = {
+          'tokyo': {
+            'culture': ['Visit Senso-ji Temple', 'Explore Tokyo National Museum', 'Traditional tea ceremony'],
+            'food': ['Tsukiji Outer Market tour', 'Ramen tasting tour', 'Sake brewery visit'],
+            'art': ['TeamLab Borderless', 'Mori Art Museum', 'Street art in Harajuku']
+          },
+          'paris': {
+            'culture': ['Louvre Museum', 'Notre-Dame Cathedral', 'Versailles Palace'],
+            'food': ['Cooking class in Le Marais', 'Wine tasting tour', 'Pastry workshop'],
+            'art': ['Musée d\'Orsay', 'Montmartre artist district', 'Street art in Belleville']
+          },
+          'barcelona': {
+            'culture': ['Sagrada Familia', 'Gothic Quarter walking tour', 'Flamenco show'],
+            'food': ['Tapas crawl in El Born', 'Paella cooking class', 'Market tour'],
+            'art': ['Picasso Museum', 'Park Güell', 'Street art in El Raval']
+          }
+        };
+        
+        const destActivities = activities[destination.toLowerCase()] || {
+          'culture': ['Local cultural center', 'Historical walking tour', 'Traditional performance'],
+          'food': ['Local food tour', 'Cooking class', 'Market visit'],
+          'art': ['Local art museum', 'Gallery district', 'Street art tour']
+        };
+        
+        const interestList = interests ? interests.split(',').map(i => i.trim().toLowerCase()) : ['culture'];
+        let recommendations = [];
+        
+        interestList.forEach(interest => {
+          if (destActivities[interest]) {
+            recommendations.push(...destActivities[interest]);
+          }
+        });
+        
+        return `🎯 Activity recommendations for ${destination} (${interests}):\n${recommendations.slice(0, 5).map(a => `• ${a}`).join('\n')}`;
+      }
+    }
+
+    // Budget Optimizer Tool (NEW)
+    class BudgetTool extends Tool {
+      name = 'budget_optimizer';
+      description = 'Optimize budget allocation for travel expenses';
+
+      async _call(query) {
+        const [budget, duration, destination] = query.split('|').map(s => s.trim());
+        const dailyBudget = parseFloat(budget.replace(/[^0-9.]/g, ''));
+        const days = parseInt(duration.match(/\d+/)?.[0] || '3');
+        const totalBudget = dailyBudget * days;
+        
+        const budgetBreakdown = {
+          accommodation: Math.round(totalBudget * 0.35),
+          food: Math.round(totalBudget * 0.25),
+          activities: Math.round(totalBudget * 0.20),
+          transportation: Math.round(totalBudget * 0.15),
+          miscellaneous: Math.round(totalBudget * 0.05)
+        };
+        
+        return `💰 Budget optimization for ${destination} (${duration}, $${dailyBudget}/day):\n` +
+               `• Total Budget: $${totalBudget}\n` +
+               `• Accommodation (35%): $${budgetBreakdown.accommodation}\n` +
+               `• Food & Dining (25%): $${budgetBreakdown.food}\n` +
+               `• Activities (20%): $${budgetBreakdown.activities}\n` +
+               `• Transportation (15%): $${budgetBreakdown.transportation}\n` +
+               `• Miscellaneous (5%): $${budgetBreakdown.miscellaneous}`;
       }
     }
 
@@ -137,50 +259,73 @@ class SmartTravelPlanner {
       }
     }
 
-    this.tools = [new WeatherTool(), new CurrencyTool(), new BookingTool()];
-    console.log('✅ Travel Tools initialized (Weather, Currency, Booking)');
+    this.tools = [
+      new WeatherTool(), 
+      new CurrencyTool(), 
+      new RestaurantTool(), 
+      new ActivityTool(), 
+      new BudgetTool(), 
+      new BookingTool()
+    ];
+    console.log('✅ Enhanced Travel Tools initialized (Weather, Currency, Restaurants, Activities, Budget, Booking)');
   }
 
-  // User Session Management (from Memory demo)
-  getOrCreateUserSession(userId) {
-    if (!this.userSessions.has(userId)) {
-      this.userSessions.set(userId, {
-        id: userId,
-        profile: {
-          preferredBudget: null,
-          travelStyle: null,
-          favoriteDestinations: [],
-          dietaryRestrictions: []
-        },
-        conversationHistory: [],
-        memory: new BufferMemory({
-          memoryKey: 'chat_history',
-          returnMessages: true,
-        }),
-        createdAt: new Date()
+  // Initialize AgentExecutor for proper agent-based execution
+  async initializeAgent() {
+    console.log('🤖 Initializing AgentExecutor...');
+
+    try {
+      // Create a proper ReAct prompt template
+      const agentPrompt = PromptTemplate.fromTemplate(
+        `Answer the following questions as best you can. You have access to the following tools:
+
+{tools}
+
+Use the following format:
+
+Question: the input question you must answer
+Thought: you should always think about what to do
+Action: the action to take, should be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know the final answer
+Final Answer: the final answer to the original input question
+
+Begin!
+
+Question: {input}
+Thought:{agent_scratchpad}`
+      );
+
+      // Create the ReAct agent
+      const agent = await createReactAgent({
+        llm: this.model,
+        tools: this.tools,
+        prompt: agentPrompt
       });
+
+      // Create the AgentExecutor with better configuration
+      this.agentExecutor = new AgentExecutor({
+        agent,
+        tools: this.tools,
+        verbose: true,
+        maxIterations: 10,
+        returnIntermediateSteps: true,
+        handleParsingErrors: true
+      });
+
+      console.log('✅ AgentExecutor initialized with ReAct agent');
+    } catch (error) {
+      console.log('⚠️  AgentExecutor initialization failed:', error.message);
+      console.log('   Falling back to direct tool calls');
     }
-    return this.userSessions.get(userId);
   }
 
-  // Extract preferences from user input (from Memory demo)
-  extractPreferences(input) {
-    const preferences = {};
-    
-    // Budget extraction
+  // Extract budget from user input
+  extractBudget(input) {
     const budgetMatch = input.match(/\$(\d+(?:,\d+)?)/);
-    if (budgetMatch) preferences.preferredBudget = budgetMatch[0];
-
-    // Travel style extraction
-    const styles = ['luxury', 'budget', 'adventure', 'cultural', 'romantic', 'family'];
-    for (const style of styles) {
-      if (input.toLowerCase().includes(style)) {
-        preferences.travelStyle = style.charAt(0).toUpperCase() + style.slice(1);
-        break;
-      }
-    }
-
-    return preferences;
+    return budgetMatch ? budgetMatch[0] + ' per day' : null;
   }
 
   // Knowledge retrieval (from RAG demo)
@@ -207,8 +352,26 @@ class SmartTravelPlanner {
 
   // Structured travel planning (from Structured Chain demo)
   async generateStructuredItinerary(destination, duration, budget, interests, groupSize) {
+    // Define structured output schema using Zod
+    const itinerarySchema = z.object({
+      destination: z.string().describe('Destination name'),
+      duration: z.string().describe('Trip duration'),
+      totalBudget: z.string().describe('Total estimated budget'),
+      dailyItinerary: z.array(z.object({
+        day: z.number().describe('Day number'),
+        activities: z.array(z.string()).describe('List of activities for the day'),
+        meals: z.array(z.string()).describe('Meal recommendations'),
+        estimatedCost: z.string().describe('Estimated daily cost')
+      })),
+      packingList: z.array(z.string()).describe('Essential items to pack'),
+      importantNotes: z.array(z.string()).describe('Important travel notes and tips')
+    });
+
+    // Create output parser
+    const parser = new JsonOutputParser({ schema: itinerarySchema });
+
     const structuredPrompt = new PromptTemplate({
-      template: `Create a detailed travel itinerary in JSON format:
+      template: `Create a detailed travel itinerary for the following trip:
 
 Destination: {destination}
 Duration: {duration}
@@ -216,35 +379,10 @@ Budget: {budget}
 Interests: {interests}
 Group: {groupSize}
 
-Return a JSON object with this structure:
-{{
-  "destination": "destination name",
-  "duration": "trip duration", 
-  "totalBudget": "estimated total budget",
-  "dailyItinerary": [
-    {{
-      "day": 1,
-      "theme": "day theme",
-      "activities": [
-        {{
-          "time": "HH:MM",
-          "activity": "activity name",
-          "location": "location",
-          "cost": "cost estimate"
-        }}
-      ],
-      "meals": {{
-        "breakfast": "recommendation",
-        "lunch": "recommendation",
-        "dinner": "recommendation"
-      }},
-      "dailyBudget": "daily cost breakdown"
-    }}
-  ],
-  "packingList": ["item1", "item2"],
-  "culturalTips": ["tip1", "tip2"]
-}}`,
-      inputVariables: ['destination', 'duration', 'budget', 'interests', 'groupSize']
+Provide a comprehensive travel plan with daily activities, meals, packing list, and important notes.
+
+{format_instructions}`,
+      inputVariables: ['destination', 'duration', 'budget', 'interests', 'groupSize', 'format_instructions']
     });
 
     if (this.model) {
@@ -252,11 +390,12 @@ Return a JSON object with this structure:
         const chain = RunnableSequence.from([
           structuredPrompt,
           this.model,
-          new JsonOutputParser()
+          parser
         ]);
 
         return await chain.invoke({
-          destination, duration, budget, interests, groupSize
+          destination, duration, budget, interests, groupSize,
+          format_instructions: parser.getFormatInstructions()
         });
       } catch (error) {
         console.log('Using fallback structured response');
@@ -271,89 +410,187 @@ Return a JSON object with this structure:
       dailyItinerary: [
         {
           day: 1,
-          theme: `Exploring ${destination}`,
           activities: [
-            {
-              time: "09:00",
-              activity: "City tour and main attractions",
-              location: "City center",
-              cost: "$50-80"
-            }
+            `Morning: Explore ${destination} city center and main attractions`,
+            `Afternoon: Visit local markets and cultural sites`,
+            `Evening: Enjoy traditional ${destination} cuisine`
           ],
-          meals: {
-            breakfast: "Local café",
-            lunch: "Traditional restaurant",
-            dinner: "Recommended local cuisine"
-          },
-          dailyBudget: "$120-180"
+          meals: [
+            "Breakfast at local café",
+            "Lunch at traditional restaurant", 
+            "Dinner featuring local specialties"
+          ],
+          estimatedCost: budget || "$120-150"
         }
       ],
-      packingList: ["Comfortable shoes", "Camera", "Travel documents"],
-      culturalTips: ["Research local customs", "Learn basic phrases", "Respect local traditions"]
+      packingList: [
+        "Comfortable walking shoes",
+        "Camera for sightseeing",
+        "Weather-appropriate clothing",
+        "Travel documents and ID",
+        "Portable phone charger"
+      ],
+      importantNotes: [
+        `Check visa requirements for ${destination}`,
+        "Research local customs and etiquette",
+        "Book accommodations in advance",
+        "Keep emergency contacts handy"
+      ]
     };
   }
 
-  // Complete travel planning workflow
+  // Complete travel planning workflow (simplified - no session management)
   async planTravel(userId, request) {
     console.log(`🎯 Planning travel for user ${userId}:`);
     console.log(`   Request: "${request}"`);
     console.log('');
 
-    // Step 1: Get or create user session
-    const session = this.getOrCreateUserSession(userId);
-    console.log('✅ Step 1: User session retrieved');
-
-    // Step 2: Extract and update preferences
-    const newPreferences = this.extractPreferences(request);
-    Object.assign(session.profile, newPreferences);
-    console.log('✅ Step 2: Preferences extracted and updated');
-    if (Object.keys(newPreferences).length > 0) {
-      console.log(`   New preferences: ${JSON.stringify(newPreferences)}`);
-    }
-
-    // Step 3: Parse travel request
+    // Step 1: Parse travel request directly
     const destination = this.extractDestination(request);
     const duration = this.extractDuration(request) || '3 days';
-    const budget = session.profile.preferredBudget || '$150 per day';
+    const budget = this.extractBudget(request) || '$150 per day';
     const interests = this.extractInterests(request) || 'sightseeing, culture';
     const groupSize = this.extractGroupSize(request) || '2 adults';
 
-    console.log('✅ Step 3: Travel request parsed');
+    console.log('✅ Step 1: Travel request parsed');
     console.log(`   Destination: ${destination}`);
     console.log(`   Duration: ${duration}`);
     console.log(`   Budget: ${budget}`);
+    console.log(`   Interests: ${interests}`);
+    console.log(`   Group Size: ${groupSize}`);
 
-    // Step 4: Retrieve relevant knowledge
+    // Step 2: Retrieve relevant knowledge
     const knowledge = await this.retrieveKnowledge(`${destination} travel guide attractions culture`);
-    console.log('✅ Step 4: Knowledge retrieved from travel database');
+    console.log('✅ Step 2: Knowledge retrieved from travel database');
 
-    // Step 5: Check weather and currency (using tools)
-    let weatherInfo = 'Weather data unavailable';
-    let currencyInfo = 'Currency data unavailable';
+    // Step 5: Use AgentExecutor for proper agent-based execution
+    let agentResults = {
+      weatherInfo: 'Weather data unavailable',
+      currencyInfo: 'Currency data unavailable', 
+      restaurantInfo: 'Restaurant data unavailable',
+      activityInfo: 'Activity data unavailable',
+      budgetInfo: 'Budget data unavailable',
+      bookingInfo: 'Booking assistance available'
+    };
     
-    try {
-      weatherInfo = await this.tools[0]._call(destination);
-      if (budget.includes('$')) {
-        const amount = budget.match(/\$(\d+)/)?.[1] || '1000';
-        currencyInfo = await this.tools[1]._call(`${amount} USD to EUR`);
+    if (this.agentExecutor) {
+      try {
+        console.log('🤖 Using AgentExecutor for intelligent travel planning...');
+        console.log(`   🎯 Agent analyzing: ${destination}, ${duration}, ${budget}, interests: ${interests}`);
+        
+        // Create a comprehensive travel planning request for the agent
+        const agentInput = `Plan a comprehensive travel experience for:
+- Destination: ${destination}
+- Duration: ${duration}
+- Budget: ${budget}
+- Interests: ${interests}
+- Group size: ${groupSize}
+
+Please use the available tools to gather weather information, currency details, restaurant recommendations, activity suggestions, budget optimization, and booking assistance as appropriate for this request.`;
+        
+        // Execute the agent with the travel planning request
+        const agentResponse = await this.agentExecutor.invoke({
+          input: agentInput
+        });
+        
+        console.log('🤖 AgentExecutor completed travel planning');
+        console.log('   Agent output:', agentResponse.output);
+        
+        // Parse agent results from intermediate steps
+        if (agentResponse.intermediateSteps && agentResponse.intermediateSteps.length > 0) {
+          console.log(`   Tools used: ${agentResponse.intermediateSteps.length} tool calls`);
+          
+          agentResponse.intermediateSteps.forEach((step, index) => {
+            const toolName = step.action.tool;
+            const toolInput = step.action.toolInput;
+            const toolOutput = step.observation;
+            
+            console.log(`   Tool ${index + 1}: ${toolName} -> ${toolOutput.substring(0, 50)}...`);
+            
+            // Map tool outputs to result structure
+            if (toolName === 'weather_checker') {
+              agentResults.weatherInfo = toolOutput;
+            } else if (toolName === 'currency_converter') {
+              agentResults.currencyInfo = toolOutput;
+            } else if (toolName === 'restaurant_finder') {
+              agentResults.restaurantInfo = toolOutput;
+            } else if (toolName === 'activity_recommender') {
+              agentResults.activityInfo = toolOutput;
+            } else if (toolName === 'budget_optimizer') {
+              agentResults.budgetInfo = toolOutput;
+            } else if (toolName === 'booking_assistant') {
+              agentResults.bookingInfo = toolOutput;
+            }
+          });
+        }
+        
+        // Store the agent's final response for reference
+        agentResults.agentResponse = agentResponse.output;
+        
+      } catch (error) {
+        console.log('⚠️ AgentExecutor failed, using direct tool calls:', error.message);
+        // Fallback to direct tool calls to ensure we get dynamic data
+        try {
+          console.log('🔧 Using direct tool calls for dynamic data...');
+          
+          // Always get weather
+          agentResults.weatherInfo = await this.tools[0]._call(destination);
+          console.log('   ✅ Weather tool called directly');
+          
+          // Get currency if budget specified
+          if (budget.includes('$')) {
+            const amount = budget.match(/\$([0-9]+)/)?.[1] || '200';
+            agentResults.currencyInfo = await this.tools[1]._call(`${amount} USD to EUR`);
+            console.log('   ✅ Currency tool called directly');
+          }
+          
+          // Get restaurants if food interest
+          if (interests.toLowerCase().includes('food') || interests.toLowerCase().includes('culinary')) {
+            agentResults.restaurantInfo = await this.tools[2]._call(destination);
+            console.log('   ✅ Restaurant tool called directly');
+          }
+          
+          // Get activities for interests
+          if (interests && interests !== 'sightseeing, culture') {
+            agentResults.activityInfo = await this.tools[3]._call(`${destination}|${interests}`);
+            console.log('   ✅ Activity tool called directly');
+          }
+          
+          // Get budget optimization
+          if (budget.includes('$') && duration) {
+            agentResults.budgetInfo = await this.tools[4]._call(`${budget}|${duration}|${destination}`);
+            console.log('   ✅ Budget tool called directly');
+          }
+          
+          // Get booking for groups or long trips
+          const groupNum = parseInt(groupSize.match(/\d+/)?.[0] || '1');
+          const tripDays = parseInt(duration.match(/\d+/)?.[0] || '3');
+          if (groupNum > 2 || tripDays > 3) {
+            agentResults.bookingInfo = await this.tools[5]._call(`${groupSize} group booking for ${destination}, ${duration}`);
+            console.log('   ✅ Booking tool called directly');
+          }
+          
+          agentResults.agentResponse = `Dynamic travel plan generated using direct tool calls for ${destination}`;
+          
+        } catch (toolError) {
+          console.log('⚠️ Direct tool calls failed, using simulation data:', toolError.message);
+        }
       }
-    } catch (error) {
-      console.log('Using fallback tool data');
+    } else {
+      // Simulation mode - use mock data with dynamic content
+      console.log('🤖 Running in simulation mode (no AgentExecutor)');
+      agentResults.weatherInfo = `${destination}: Pleasant weather, 22°C, partly cloudy`;
+      agentResults.currencyInfo = budget.includes('$') ? '1 USD = 0.85 EUR (simulated)' : 'Currency conversion available';
+      agentResults.restaurantInfo = `🍽️ Restaurant recommendations for ${destination}:\n• Local specialty restaurant - Traditional cuisine ($20-30)`;
+      agentResults.activityInfo = `🎯 Activity recommendations for ${destination} (${interests}):\n• Cultural walking tour\n• Local market visit`;
+      agentResults.budgetInfo = `💰 Budget optimization for ${destination} (${duration}, simulation mode)`;
+      agentResults.agentResponse = `Simulated comprehensive travel plan for ${destination}`;
     }
     
-    console.log('✅ Step 5: Tools executed (Weather, Currency)');
-
-    // Step 6: Generate structured itinerary
-    const itinerary = await this.generateStructuredItinerary(
-      destination, duration, budget, interests, groupSize
-    );
-    console.log('✅ Step 6: Structured itinerary generated');
-
-    // Step 7: Create comprehensive response
+    // Create response object with agent results
     const response = {
       userId,
       timestamp: new Date().toISOString(),
-      userProfile: session.profile,
       travelPlan: {
         destination,
         duration,
@@ -363,29 +600,34 @@ Return a JSON object with this structure:
       },
       knowledge: knowledge.substring(0, 300) + '...',
       currentConditions: {
-        weather: weatherInfo,
-        currency: currencyInfo
+        weather: agentResults.weatherInfo,
+        currency: agentResults.currencyInfo,
+        restaurants: agentResults.restaurantInfo,
+        activities: agentResults.activityInfo,
+        budgetBreakdown: agentResults.budgetInfo,
+        booking: agentResults.bookingInfo
       },
-      structuredItinerary: itinerary,
-      recommendations: this.generatePersonalizedRecommendations(session.profile, destination),
-      nextSteps: [
+      structuredItinerary: {
+        destination,
+        duration,
+        totalBudget: budget,
+        dailyItinerary: [{
+          day: 1,
+          activities: [`Explore ${destination} based on ${interests}`],
+          meals: ['Local breakfast', 'Traditional lunch', 'Authentic dinner'],
+          estimatedCost: budget
+        }],
+        packingList: ['Comfortable shoes', 'Camera', 'Travel documents'],
+        importantNotes: [`Check visa requirements for ${destination}`]
+      },
+      recommendations: [
         'Review and customize your itinerary',
-        'Book accommodations and flights',
-        'Check visa requirements',
-        'Purchase travel insurance'
-      ]
+        'Book accommodations and flights in advance',
+        'Check visa requirements for your destination',
+        'Consider purchasing travel insurance'
+      ],
+      agentResponse: agentResults.agentResponse || 'Travel plan generated successfully'
     };
-
-    // Step 8: Update conversation history
-    session.conversationHistory.push({
-      request,
-      response: 'Comprehensive travel plan generated',
-      timestamp: new Date()
-    });
-
-    console.log('✅ Step 7: Comprehensive response compiled');
-    console.log('✅ Step 8: Conversation history updated');
-    console.log('');
 
     return response;
   }
@@ -438,116 +680,6 @@ Return a JSON object with this structure:
 
     return recommendations;
   }
-
-  // Demo method to show complete workflow
-  async demonstrateCompleteWorkflow() {
-    console.log('🌟 SMART TRAVEL PLANNER: COMPLETE WORKFLOW DEMONSTRATION');
-    console.log('='.repeat(70));
-    console.log('Integrating: Prompts + Chains + Structured Output + RAG + Agents + Memory');
-    console.log('');
-
-    // Demo scenarios
-    const scenarios = [
-      {
-        userId: 'user_alice',
-        request: 'I want a 5-day adventure trip to Costa Rica with a $2000 budget for hiking and wildlife'
-      },
-      {
-        userId: 'user_bob', 
-        request: 'Plan a luxury romantic getaway to Paris for 3 days, budget is flexible'
-      },
-      {
-        userId: 'user_alice', // Returning user
-        request: 'What other adventure destinations would you recommend based on my preferences?'
-      }
-    ];
-
-    for (let i = 0; i < scenarios.length; i++) {
-      const scenario = scenarios[i];
-      console.log(`🎭 SCENARIO ${i + 1}: ${scenario.userId === 'user_alice' && i === 2 ? 'Returning User' : 'New Request'}`);
-      console.log('='.repeat(50));
-      
-      try {
-        const result = await this.planTravel(scenario.userId, scenario.request);
-        
-        console.log('📋 COMPREHENSIVE TRAVEL PLAN GENERATED:');
-        console.log('');
-        console.log(`👤 User Profile:`);
-        console.log(`   Budget Preference: ${result.userProfile.preferredBudget || 'Not specified'}`);
-        console.log(`   Travel Style: ${result.userProfile.travelStyle || 'Not specified'}`);
-        console.log('');
-        console.log(`🎯 Travel Plan:`);
-        console.log(`   Destination: ${result.travelPlan.destination}`);
-        console.log(`   Duration: ${result.travelPlan.duration}`);
-        console.log(`   Budget: ${result.travelPlan.budget}`);
-        console.log(`   Interests: ${result.travelPlan.interests}`);
-        console.log('');
-        console.log(`📚 Knowledge Retrieved:`);
-        console.log(`   ${result.knowledge}`);
-        console.log('');
-        console.log(`🌤️ Current Conditions:`);
-        console.log(`   Weather: ${result.currentConditions.weather}`);
-        console.log(`   Currency: ${result.currentConditions.currency}`);
-        console.log('');
-        console.log(`📅 Structured Itinerary:`);
-        console.log(`   Days Planned: ${result.structuredItinerary.dailyItinerary.length}`);
-        console.log(`   Total Budget: ${result.structuredItinerary.totalBudget}`);
-        console.log(`   Packing Items: ${result.structuredItinerary.packingList.length}`);
-        console.log('');
-        console.log(`💡 Personalized Recommendations:`);
-        result.recommendations.forEach((rec, idx) => {
-          console.log(`   ${idx + 1}. ${rec}`);
-        });
-        console.log('');
-        console.log(`🚀 Next Steps:`);
-        result.nextSteps.forEach((step, idx) => {
-          console.log(`   ${idx + 1}. ${step}`);
-        });
-        
-      } catch (error) {
-        console.log(`❌ Error in scenario ${i + 1}: ${error.message}`);
-      }
-      
-      console.log('');
-      console.log('─'.repeat(70));
-      console.log('');
-    }
-
-    // Show session analytics
-    console.log('📊 SESSION ANALYTICS');
-    console.log('='.repeat(30));
-    console.log(`Total Active Sessions: ${this.userSessions.size}`);
-    
-    for (const [userId, session] of this.userSessions) {
-      console.log(`👤 ${userId}:`);
-      console.log(`   Conversations: ${session.conversationHistory.length}`);
-      console.log(`   Profile Completeness: ${Object.values(session.profile).filter(v => v).length}/4 fields`);
-      console.log(`   Last Active: ${session.conversationHistory[session.conversationHistory.length - 1]?.timestamp.toLocaleTimeString() || 'N/A'}`);
-    }
-    console.log('');
-
-    // Workshop completion message
-    console.log('🎓 WORKSHOP COMPLETION SUMMARY');
-    console.log('='.repeat(50));
-    console.log('✅ All Components Successfully Integrated:');
-    console.log('   📝 Advanced Prompt Templates with multiple variables');
-    console.log('   🔗 Multi-step Chain workflows with data flow');
-    console.log('   🏗️ Structured JSON output for production use');
-    console.log('   📚 RAG Knowledge Base with semantic search');
-    console.log('   🤖 Intelligent Agents with external tools');
-    console.log('   🧠 Memory Management with user personalization');
-    console.log('');
-    console.log('🏆 CONGRATULATIONS!');
-    console.log('You have successfully built a complete Smart Travel Planner');
-    console.log('that demonstrates all essential AI application patterns!');
-    console.log('');
-    console.log('🚀 Ready for Production:');
-    console.log('   • Add database persistence for user data');
-    console.log('   • Integrate real travel APIs (weather, booking, etc.)');
-    console.log('   • Build frontend interface for user interactions');
-    console.log('   • Deploy to cloud infrastructure');
-    console.log('   • Add monitoring, logging, and analytics');
-  }
 }
 
 export async function smartTravelPlannerCompleteDemo() {
@@ -560,16 +692,19 @@ export async function smartTravelPlannerCompleteDemo() {
     // Initialize the complete Smart Travel Planner
     const planner = new SmartTravelPlanner();
     await planner.initialize();
-
-    // Run the complete workflow demonstration
-    await planner.demonstrateCompleteWorkflow();
-
+    
+    console.log('🎯 Smart Travel Planner initialized and ready!');
+    console.log('The planner is now ready to process real requests from the frontend form.');
   } catch (error) {
     console.error('❌ Error in complete Smart Travel Planner demo:', error.message);
     console.error('Stack trace:', error.stack);
     throw error;
   }
 }
+
+// Export the SmartTravelPlanner class for API usage
+export { SmartTravelPlanner };
+export default SmartTravelPlanner;
 
 // Execute the demo when this file is run directly
 (async () => {

@@ -283,6 +283,43 @@ app.post('/api/execute/:id', async (req, res) => {
     }
 });
 
+// Travel Planner API endpoint
+app.post('/api/travel-planner', async (req, res) => {
+    try {
+        const { userId, request } = req.body;
+        
+        if (!userId || !request) {
+            return res.status(400).json({ 
+                error: 'Missing required fields: userId and request' 
+            });
+        }
+
+        console.log(`🌍 Travel planning request from ${userId}: ${request}`);
+        
+        // Import and execute the smart travel planner
+        const SmartTravelPlannerModule = await import('./demos/travel-planner/smart-travel-planner-complete.js');
+        const SmartTravelPlanner = SmartTravelPlannerModule.default;
+        
+        // Create and initialize the planner
+        const planner = new SmartTravelPlanner();
+        await planner.initialize();
+        
+        // Generate the travel plan
+        const travelPlan = await planner.planTravel(userId, request);
+        
+        console.log(`✅ Travel plan generated successfully for ${userId}`);
+        res.json(travelPlan);
+        
+    } catch (error) {
+        console.error('❌ Travel planner error:', error.message);
+        res.status(500).json({
+            error: 'Failed to generate travel plan',
+            details: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 app.get('/api/health', (req, res) => {
     const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
     res.json({
